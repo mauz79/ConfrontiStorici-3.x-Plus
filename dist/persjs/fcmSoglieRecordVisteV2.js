@@ -404,6 +404,12 @@ function SRVBaseStats(stagione, compId) {
   return map;
 }
 
+
+function SRVAddRow(rows, row) {
+  if (!rows || !row) return;
+  rows.push(row);
+}
+
 function SRVBuildRowsFromAnalisi(res, compId) {
   var rows = [];
 
