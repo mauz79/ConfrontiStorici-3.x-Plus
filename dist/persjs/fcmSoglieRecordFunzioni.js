@@ -1,6 +1,6 @@
 /*
   fcmSoglieRecordFunzioni.js
-  Vista aggiuntiva per ConfrontiStorici: soglie, fortuna/sfortuna, fattore campo.
+  Vista aggiuntiva per ConfrontiStorici: soglie, fortuna/sfortuna, fattore campo, mezzo punto.
   Non modifica il plugin originale: legge arrConfronti e arrDirectory da fcmConfrontiDati.js.
 */
 
@@ -123,22 +123,11 @@ function SogRepCartellaStagione(stagione) {
   return "";
 }
 
-function SogRepUrlGiornata(m) {
-  var cartella = SogRepCartellaStagione(m.Stagione);
-  if (cartella == "") return "";
-  return "../" + cartella + "/ris." + SOG_REP_EXT + "?Gio=" + m.GiornataA;
-}
-
 function SogRepLinkGiornata(m) {
-  var href = SogRepUrlGiornata(m);
-  if (href == "") return SogRepHtml(m.GiornataA);
-  return "<a class='t-xxs' href='" + href + "' title='Apri tabellino giornata'>" + SogRepHtml(m.GiornataA) + "</a>";
-}
-
-function SogRepLinkRisultato(m, testo) {
-  var href = SogRepUrlGiornata(m);
-  if (href == "") return testo;
-  return "<a class='t-xxs' href='" + href + "' title='Apri tabellino partita/giornata'>" + testo + "</a>";
+  var cartella = SogRepCartellaStagione(m.Stagione);
+  if (cartella == "") return SogRepHtml(m.GiornataA);
+  var href = "../" + cartella + "/ris." + SOG_REP_EXT + "?Gio=" + m.GiornataA;
+  return "<a class='t-xxs' href='" + href + "'>" + SogRepHtml(m.GiornataA) + "</a>";
 }
 
 function SogRepNomeCompetizione(id) {
@@ -179,6 +168,11 @@ function SogRepGetSquadra(stats, id, nome) {
       parMir: 0,
       sconBeffa: 0,
       parStretto: 0,
+      vittMancata05: 0,
+      sconPelo05: 0,
+      giustoGiusto: 0,
+      mezzoPuntoNeg: 0,
+      mezzoPuntoPos: 0,
       fcGuadagnatiCasa: 0,
       fcPersiTrasferta: 0,
       fcSaldo: 0,
@@ -236,6 +230,7 @@ function SogRepAnalizza(stagioneFiltro) {
     stats: {},
     eventiFortuna: [],
     eventiSfortuna: [],
+    eventiMezzoPunto: [],
     eventiFattoreCampo: [],
     eventiSoglia: [],
     partite: 0
@@ -315,6 +310,30 @@ function SogRepAnalizza(stagioneFiltro) {
         st.sfortuna++;
         st.parStretto++;
         SogRepAddEvento(res.eventiSfortuna, "Pareggio stretto", m, pr.nome, pr.avvNome, pr.punti, pr.puntiAvv, pr.gol, pr.golAvv, "Tu sopra ai punti ma a -0,5 dalla soglia successiva");
+      }
+
+      /*
+        Record mezzo punto V1.1.0.
+        Sono categorie piu larghe rispetto alle definizioni strette di
+        Vittoria chirurgica / Sconfitta beffa / Pareggio stretto.
+        Non modificano fortuna/sfortuna stretta: vengono conteggiate a parte.
+      */
+      if (pr.gol == pr.golAvv && SogRepMancaSogliaPerMezzo(pr.punti, pr.gol)) {
+        st.mezzoPuntoNeg++;
+        st.vittMancata05++;
+        SogRepAddEvento(res.eventiMezzoPunto, "Vittoria mancata per 0,5", m, pr.nome, pr.avvNome, pr.punti, pr.puntiAvv, pr.gol, pr.golAvv, "Con 0,5 punti in piu avrebbe segnato un gol in piu e vinto la partita");
+      }
+
+      if (pr.gol < pr.golAvv && pr.golAvv == pr.gol + 1 && SogRepMancaSogliaPerMezzo(pr.punti, pr.gol)) {
+        st.mezzoPuntoNeg++;
+        st.sconPelo05++;
+        SogRepAddEvento(res.eventiMezzoPunto, "Sconfitta per un pelo", m, pr.nome, pr.avvNome, pr.punti, pr.puntiAvv, pr.gol, pr.golAvv, "Con 0,5 punti in piu avrebbe segnato un gol in piu e pareggiato la partita");
+      }
+
+      if (pr.gol == pr.golAvv + 1 && SogRepASogliaPrecisa(pr.punti)) {
+        st.mezzoPuntoPos++;
+        st.giustoGiusto++;
+        SogRepAddEvento(res.eventiMezzoPunto, "Giusto giusto", m, pr.nome, pr.avvNome, pr.punti, pr.puntiAvv, pr.gol, pr.golAvv, "Soglia esatta che basta per vincere di un gol, indipendentemente dal punteggio avversario");
       }
     }
 
@@ -408,12 +427,8 @@ function SogRepTabellaEventi(titolo, arr) {
   document.write("<h3>" + SogRepHtml(titolo) + "</h3>");
   document.write("<table class='tb' border='1' cellpadding='3' cellspacing='0' style='border-collapse:collapse;width:100%;margin-bottom:18px;'>");
   document.write("<tr><th>Tipo</th><th>Data</th><th>Comp.</th><th>Giorn.</th><th>Squadra</th><th>Avversario</th><th>Punti</th><th>Ris.</th><th>Nota</th></tr>");
-
   for (var i = 0; i < arr.length; i++) {
     var e = arr[i];
-    var testoPunti = SogRepFmt(e.punti) + " - " + SogRepFmt(e.puntiAvv);
-    var testoRis = e.gol + "-" + e.golAvv;
-
     document.write("<tr>");
     document.write("<td>" + SogRepHtml(e.tipo) + "</td>");
     document.write("<td>" + SogRepHtml(e.m.Data) + "</td>");
@@ -421,12 +436,11 @@ function SogRepTabellaEventi(titolo, arr) {
     document.write("<td style='text-align:center'>" + SogRepLinkGiornata(e.m) + "</td>");
     document.write("<td>" + SogRepHtml(e.squadra) + "</td>");
     document.write("<td>" + SogRepHtml(e.avversario) + "</td>");
-    document.write("<td style='text-align:center'>" + SogRepLinkRisultato(e.m, testoPunti) + "</td>");
-    document.write("<td style='text-align:center'><b>" + SogRepLinkRisultato(e.m, testoRis) + "</b></td>");
+    document.write("<td style='text-align:center'>" + SogRepFmt(e.punti) + " - " + SogRepFmt(e.puntiAvv) + "</td>");
+    document.write("<td style='text-align:center'>" + e.gol + "-" + e.golAvv + "</td>");
     document.write("<td>" + SogRepHtml(e.nota) + "</td>");
     document.write("</tr>");
   }
-
   if (arr.length == 0) document.write("<tr><td colspan='9'>Nessun dato.</td></tr>");
   document.write("</table>");
 }
@@ -434,40 +448,22 @@ function SogRepTabellaEventi(titolo, arr) {
 function SogRepTabellaFattoreCampo(titolo, arr) {
   document.write("<h3>" + SogRepHtml(titolo) + "</h3>");
   document.write("<table class='tb' border='1' cellpadding='3' cellspacing='0' style='border-collapse:collapse;width:100%;margin-bottom:18px;'>");
-  document.write("<tr><th>Tipo</th><th>Data</th><th>Comp.</th><th>Giorn.</th><th>Partita</th><th>Reale</th><th>A campi invertiti</th><th>Punti class.</th><th>Swing gol</th><th>Nota</th></tr>");
-
+  document.write("<tr><th>Tipo</th><th>Data</th><th>Comp.</th><th>Giorn.</th><th>Partita</th><th>Reale</th><th>A campi invertiti</th><th>Punti class.</th><th>Swing gol</th></tr>");
   for (var i = 0; i < arr.length; i++) {
     var e = arr[i];
-
-    var reale = SogRepFmt(e.pc) + " - " + SogRepFmt(e.pf) + "<br><b>" + e.gc + "-" + e.gf + "</b>";
-    var invertito = SogRepFmt(e.pcInv) + " - " + SogRepFmt(e.pfInv) + "<br><b>" + e.gcInv + "-" + e.gfInv + "</b>";
-
-    var nota = "";
-    if (e.tipo == "Da sconfitta a vittoria") {
-      nota = "Il +1 casa ribalta completamente la partita: senza fattore campo la squadra di casa avrebbe perso, invece vince.";
-    } else if (e.tipo == "Da pareggio a vittoria") {
-      nota = "Il +1 casa trasforma un pareggio virtuale in vittoria reale.";
-    } else if (e.tipo == "Da sconfitta a pareggio") {
-      nota = "Il +1 casa evita la sconfitta e salva il pareggio.";
-    } else {
-      nota = "Il fattore campo migliora il risultato della squadra di casa rispetto alla simulazione a campi invertiti.";
-    }
-
     document.write("<tr>");
     document.write("<td>" + SogRepHtml(e.tipo) + "</td>");
     document.write("<td>" + SogRepHtml(e.m.Data) + "</td>");
     document.write("<td>" + SogRepHtml(SogRepNomeCompetizione(e.m.Competizione)) + "</td>");
     document.write("<td style='text-align:center'>" + SogRepLinkGiornata(e.m) + "</td>");
     document.write("<td>" + SogRepHtml(e.casa) + " - " + SogRepHtml(e.fuori) + "</td>");
-    document.write("<td style='text-align:center'>" + SogRepLinkRisultato(e.m, reale) + "</td>");
-    document.write("<td style='text-align:center'>" + SogRepLinkRisultato(e.m, invertito) + "</td>");
+    document.write("<td style='text-align:center'>" + SogRepFmt(e.pc) + " - " + SogRepFmt(e.pf) + "<br><b>" + e.gc + "-" + e.gf + "</b></td>");
+    document.write("<td style='text-align:center'>" + SogRepFmt(e.pcInv) + " - " + SogRepFmt(e.pfInv) + "<br><b>" + e.gcInv + "-" + e.gfInv + "</b></td>");
     document.write("<td style='text-align:center'>+" + e.deltaCasa + " casa / " + e.deltaFuori + " fuori</td>");
     document.write("<td style='text-align:center'>" + e.swingGol + "</td>");
-    document.write("<td>" + SogRepHtml(nota) + "</td>");
     document.write("</tr>");
   }
-
-  if (arr.length == 0) document.write("<tr><td colspan='10'>Nessun dato.</td></tr>");
+  if (arr.length == 0) document.write("<tr><td colspan='9'>Nessun dato.</td></tr>");
   document.write("</table>");
 }
 
@@ -480,18 +476,8 @@ function GeneraSoglieRecord() {
   document.write("<div style='font-family:Arial,Helvetica,sans-serif;font-size:12px;'>");
   document.write("<h2>Record soglie, botte di culo e fattore campo</h2>");
   document.write("<p><b>Stagione:</b> " + (stagione == 0 ? "tutte" : stagione) + " - <b>Partite analizzate:</b> " + res.partite + "</p>");
-    document.write("<p>Soglie usate: " + SOG_REP_SOGLIE.join(", ") + ". I link su giornata, punti e risultato aprono il tabellino del sito: <code>ris." + SOG_REP_EXT + "?Gio=...</code>.</p>");
+  document.write("<p>Soglie usate: " + SOG_REP_SOGLIE.join(", ") + ". I link giornata puntano ai tabellini del sito: <code>ris." + SOG_REP_EXT + "?Gio=...</code>.</p>");
   document.write("<p><a href='soglieRecord.htm'>ultima stagione</a> | <a href='soglieRecord.htm?Stagione=0'>tutte le stagioni</a></p>");
-
-  document.write("<div style='border:1px solid #999;background:#ffffe0;padding:8px;margin:10px 0 16px 0;'>");
-  document.write("<b>Legenda record</b><br>");
-  document.write("<b>Vittoria chirurgica:</b> vittoria di un solo gol con squadra esattamente sulla soglia e avversario a -0,5 dalla stessa soglia. Esempio: 66 - 65,5 = 1-0.<br>");
-  document.write("<b>Pareggio miracolato:</b> pareggio ottenuto da chi raggiunge esattamente la propria soglia, mentre l'avversario, pur facendo più punti, manca la soglia successiva di 0,5.<br>");
-  document.write("<b>Sconfitta beffa:</b> sconfitta di un solo gol con avversario esatto sulla soglia e squadra a -0,5 dalla stessa soglia.<br>");
-  document.write("<b>Pareggio stretto:</b> pareggio subito da chi fa più punti, resta a -0,5 dalla soglia successiva e trova l'avversario esatto sulla propria soglia.<br>");
-  document.write("<b>Soglia precisa:</b> prestazione in cui la squadra chiude esattamente su una soglia gol: 66, 72, 77, 81, 85, 89, ecc.<br>");
-  document.write("<b>Fattore campo decisivo:</b> partita in cui il +1 casa cambia il risultato rispetto alla simulazione a campi invertiti: casa -1, trasferta +1.");
-  document.write("</div>");
 
   var fortuna = stats.slice(0).sort(function(a, b) {
     if ((b.fortuna - b.sfortuna) != (a.fortuna - a.sfortuna)) return (b.fortuna - b.sfortuna) - (a.fortuna - a.sfortuna);
@@ -540,6 +526,7 @@ function GeneraSoglieRecord() {
 
   SogRepTabellaEventi("Dettaglio botte di culo", res.eventiFortuna);
   SogRepTabellaEventi("Dettaglio sindrome di Fantozzi", res.eventiSfortuna);
+  SogRepTabellaEventi("Dettaglio mezzo punto", res.eventiMezzoPunto);
   SogRepTabellaEventi("Dettaglio soglie precise", res.eventiSoglia);
 
   document.write("</div>");

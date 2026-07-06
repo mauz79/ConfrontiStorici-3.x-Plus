@@ -1,6 +1,6 @@
 # Record Soglie per ConfrontiStorici - Walkthrough tecnico completo
 
-Versione documentata: **V2**  
+Versione documentata: **V2 / v1.1.0**  
 Ambiente previsto: sito locale/generato da Fantacalcio Manager con plugin **ConfrontiStorici 3.x**.
 
 Questo documento descrive in modo completo cosa e' stato implementato, perche' e' stato implementato in questo modo, quali dati usa, come calcola i record e come sono organizzati i file.
@@ -35,7 +35,8 @@ Le nuove viste devono mostrare record legati a:
 2. **Sindrome di Fantozzi / Indice di sfortuna**
 3. **Soglie precise / Tiratori scelti**
 4. **Spreco punti**
-5. **Fattore campo decisivo**
+5. **Record mezzo punto / Giusto giusto**
+6. **Fattore campo decisivo**
 6. **Riepiloghi numerici per stagione, competizione e squadra**
 7. **Classifiche storiche aggregate**
 8. **Dettaglio gara per gara con link al tabellino del sito**
@@ -962,7 +963,78 @@ Con soglia 1 gol a 66, lo spreco e':
 
 Lo spreco viene conteggiato nelle vittorie.
 
-### 7.7 Fattore campo decisivo
+### 7.7 Record mezzo punto / Giusto giusto
+
+Questa famiglia e' stata aggiunta nella versione v1.1.0 per coprire casi piu larghi rispetto ai record stretti fortuna/sfortuna.
+
+I record stretti, come Vittoria chirurgica o Sconfitta beffa, guardano contemporaneamente la soglia della squadra e quella dell'avversario. I record mezzo punto guardano invece il rapporto tra punteggio della squadra e risultato ottenuto, indipendentemente dalla precisione dell'avversario.
+
+#### 7.7.1 Vittoria mancata per 0,5
+
+Si verifica quando:
+
+```text
+la partita finisce in pareggio
+la squadra e' a -0,5 dalla soglia successiva
+con 0,5 punti in piu avrebbe segnato un gol in piu e vinto
+```
+
+Esempio:
+
+```text
+71,5 - 69 = 1-1
+con 72 sarebbe 2-1
+```
+
+Non e' necessario che l'avversario sia su soglia precisa. Per questo e' una categoria piu larga del Pareggio stretto.
+
+#### 7.7.2 Sconfitta per un pelo
+
+Si verifica quando:
+
+```text
+la squadra perde di un gol
+la squadra e' a -0,5 dalla soglia successiva
+con 0,5 punti in piu avrebbe segnato un gol in piu e pareggiato
+```
+
+Esempio:
+
+```text
+76,5 - 79,5 = 2-3
+con 77 sarebbe 3-3
+```
+
+Non e' necessario che l'avversario sia su soglia precisa. Per questo e' una categoria piu larga della Sconfitta beffa.
+
+#### 7.7.3 Giusto giusto
+
+Si verifica quando:
+
+```text
+la squadra vince di un gol
+la squadra e' esattamente sulla soglia del proprio numero di gol
+quella soglia e' sufficiente per vincere di misura
+```
+
+Esempio:
+
+```text
+81 - 78,5 = 4-3
+```
+
+La Vittoria chirurgica e' un sottoinsieme del Giusto giusto.
+
+Esempio:
+
+```text
+72 - 71,5 = Vittoria chirurgica + Giusto giusto
+72 - 68 = Giusto giusto, ma non Vittoria chirurgica
+```
+
+I record mezzo punto sono conteggiati a parte e non modificano il saldo fortuna/sfortuna stretto.
+
+### 7.8 Fattore campo decisivo
 
 I punti salvati in `arrConfronti` sono considerati comprensivi del bonus casa.
 
@@ -1180,6 +1252,9 @@ FC decisivo
 % FC
 Punti casa FC
 Punti fuori persi
+Vittorie mancate 0,5
+Sconfitte per un pelo
+Giusto giusto
 Soglie precise
 % soglie
 ```

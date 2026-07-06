@@ -32,6 +32,9 @@ Le nuove viste calcolano record e riepiloghi su:
 - Pareggi miracolati
 - Sconfitte beffa
 - Pareggi stretti
+- Vittorie mancate per 0,5
+- Sconfitte per un pelo
+- Giusto giusto
 - Soglie precise
 - Spreco punti
 - Fattore campo decisivo
@@ -401,7 +404,9 @@ Le competizioni non riconosciute vengono aggregate in **Altre competizioni**.
 
 ## Stato del progetto
 
-Prima release pubblica: **v1.0.0**.
+Versione documentata: **v1.1.0**.
+
+La v1.1.0 aggiunge la famiglia **Mezzo punto / Giusto giusto** rispetto alla prima release v1.0.0.
 
 Il modulo e' pensato come estensione leggera e non invasiva: il plugin originale resta intatto.
 
