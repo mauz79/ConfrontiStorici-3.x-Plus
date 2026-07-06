@@ -30,14 +30,48 @@
 
   <script type="text/javascript">
     var SRV_STORICO_VISTA = null;
+    function SRVPopolaSquadreStoricoPreservandoFiltro(filtroSquadre, valorePrecedente) {
+      var stats = SRV_STORICO_VISTA ? SRV_STORICO_VISTA.stats : {};
+      var statsFiltrate = stats;
 
+      if (filtroSquadre == "attuali") {
+        var attuali = SRVGetSquadreAttualiMap();
+        statsFiltrate = {};
+
+        for (var k in stats) {
+          if (stats.hasOwnProperty(k) && attuali[k]) {
+            statsFiltrate[k] = stats[k];
+          }
+        }
+      }
+
+      SRVFillSquadre("filtroSquadraStorico", statsFiltrate, true);
+
+      if (valorePrecedente != "") {
+        var sel = document.getElementById("filtroSquadraStorico");
+        var trovato = false;
+
+        for (var i = 0; i < sel.options.length; i++) {
+          if (sel.options[i].value == valorePrecedente) {
+            trovato = true;
+            break;
+          }
+        }
+
+        if (trovato) sel.value = valorePrecedente;
+        else sel.value = "";
+      }
+    }
     function InitStoricoV2() {
       SRVFillCompetizioni("filtroCompetizione", 0, true);
       SRVFillMetriche("filtroRecordStorico");
+      SRVFillRecord("filtroRecordDettaglioStorico", true);
 
       document.getElementById("filtroCompetizione").onchange = RenderStoricoV2;
       document.getElementById("filtroRecordStorico").onchange = RenderStoricoV2;
+      document.getElementById("filtroRecordDettaglioStorico").onchange = RenderStoricoV2;
       document.getElementById("filtroSquadreStorico").onchange = RenderStoricoV2;
+      document.getElementById("filtroSquadraStorico").onchange = RenderStoricoV2;
       document.getElementById("filtroNumero").onchange = RenderStoricoV2;
 
       RenderStoricoV2();
@@ -47,22 +81,35 @@
     function RenderStoricoV2() {
       var compId = parseInt(document.getElementById("filtroCompetizione").value, 10);
       var metrica = document.getElementById("filtroRecordStorico").value;
+      var recordDettaglio = document.getElementById("filtroRecordDettaglioStorico").value;
       var filtroSquadre = document.getElementById("filtroSquadreStorico").value;
+      var squadraFiltroPrima = document.getElementById("filtroSquadraStorico").value;
       var topN = SRVFiltroNumero("filtroNumero");
 
       SRV_STORICO_VISTA = SRVAnalizzaVista(0, compId);
+      SRVPopolaSquadreStoricoPreservandoFiltro(filtroSquadre, squadraFiltroPrima);
+
+      var squadraFiltro = document.getElementById("filtroSquadraStorico").value;
 
       var titoloComp = "Tutte le competizioni";
       if (compId != 0) titoloComp = SRVNomeCompetizione(compId);
+
+      var testoSquadre = "tutte";
+      if (filtroSquadre == "attuali") testoSquadre = "solo attuali";
+
+      var testoSquadraFiltro = "tutte";
+      if (squadraFiltro != "") testoSquadraFiltro = squadraFiltro;
 
       document.getElementById("infoFiltro").innerHTML =
         "<b>Storico completo</b>" +
         " - <b>Competizione:</b> " + SRVH(titoloComp) +
         " - <b>Partite analizzate:</b> " + SRV_STORICO_VISTA.partite +
-        " - <b>Squadre:</b> " + (filtroSquadre == "attuali" ? "solo attuali" : "tutte");
+        " - <b>Squadre:</b> " + SRVH(testoSquadre) +
+        " - <b>Squadra:</b> " + SRVH(testoSquadraFiltro);
 
       SRVRenderClassifica("contenutoClassifiche", SRV_STORICO_VISTA, metrica, filtroSquadre, topN);
-      SRVRenderRiepilogo("contenutoRiepilogo", SRV_STORICO_VISTA, "");
+      SRVRenderRiepilogo("contenutoRiepilogo", SRV_STORICO_VISTA, squadraFiltro, filtroSquadre);
+      SRVRenderDettaglio("contenutoDettaglio", SRV_STORICO_VISTA, recordDettaglio, squadraFiltro, topN);
     }
   </script>
 </head>
@@ -72,7 +119,7 @@
     <h2>Record Soglie - Storico V2</h2>
 
     <p>
-      Vista storica nuova con filtro competizione, filtro squadre attuali/tutte, schede separate e riepilogo numerico.
+      Vista storica nuova con filtro competizione, filtro squadre attuali/tutte, filtro singola squadra, schede separate e riepilogo numerico.
       Pagine di controllo:
       <a href="soglieRecord.htm">base</a> |
       <a href="soglieRecordStorico.htm">storico vecchio</a> |
@@ -92,11 +139,21 @@
 
       &nbsp;&nbsp;
 
+      Record dettaglio:
+      <select id="filtroRecordDettaglioStorico"></select>
+
+      &nbsp;&nbsp;
+
       Squadre:
       <select id="filtroSquadreStorico">
         <option value="attuali" selected>solo squadre attuali</option>
         <option value="tutte">tutte le squadre</option>
       </select>
+
+      &nbsp;&nbsp;
+
+      Squadra:
+      <select id="filtroSquadraStorico"></select>
 
       &nbsp;&nbsp;
 
@@ -117,6 +174,7 @@
     <div class="srv-tabs">
       <input type="button" value="Classifiche aggregate" onclick="SRVSetTab('tabClassifiche');">
       <input type="button" value="Riepilogo numerico" onclick="SRVSetTab('tabRiepilogo');">
+      <input type="button" value="Dettaglio gare" onclick="SRVSetTab('tabDettaglio');">
     </div>
 
     <div id="tabClassifiche" class="srv-tab">
@@ -125,6 +183,10 @@
 
     <div id="tabRiepilogo" class="srv-tab">
       <div id="contenutoRiepilogo"></div>
+    </div>
+
+    <div id="tabDettaglio" class="srv-tab">
+      <div id="contenutoDettaglio"></div>
     </div>
   </div>
 </body>
