@@ -6,6 +6,7 @@
 
   <script src="persjs/fcmSoglieRecordFunzioni.js" type="text/javascript"></script>
   <script src="persjs/fcmConfrontiDati.js" type="text/javascript"></script>
+  <script src="persjs/fcmSoglieRecordConfigPlus.js" type="text/javascript"></script>
   <script src="persjs/fcmSoglieRecordVisteV2.js" type="text/javascript"></script>
 
   <link href="fcmmael.css" rel="stylesheet" type="text/css">
@@ -31,59 +32,50 @@
     var SRV_STAGIONE_VISTA = null;
 
     function InitStagioneV2() {
-      try {
-        SRVFillStagioni("filtroStagione");
+      SRVFillStagioni("filtroStagione");
+      SRVFillCompetizioni("filtroCompetizione", parseInt(document.getElementById("filtroStagione").value, 10), true);
+      SRVFillRecord("filtroRecord", true);
+
+      document.getElementById("filtroStagione").onchange = function() {
         SRVFillCompetizioni("filtroCompetizione", parseInt(document.getElementById("filtroStagione").value, 10), true);
-        SRVFillRecord("filtroRecord", true);
-
-        document.getElementById("filtroStagione").onchange = function() {
-          SRVFillCompetizioni("filtroCompetizione", parseInt(document.getElementById("filtroStagione").value, 10), true);
-          RenderStagioneV2();
-        };
-
-        document.getElementById("filtroCompetizione").onchange = RenderStagioneV2;
-        document.getElementById("filtroRecord").onchange = RenderStagioneV2;
-        document.getElementById("filtroSquadra").onchange = RenderStagioneV2;
-        document.getElementById("filtroNumero").onchange = RenderStagioneV2;
-
         RenderStagioneV2();
-        SRVSetTab("tabDettaglio");
-      } catch(e) {
-        document.getElementById("errorePagina").innerHTML = "<b>Errore JavaScript:</b> " + e.message;
-      }
+      };
+
+      document.getElementById("filtroCompetizione").onchange = RenderStagioneV2;
+      document.getElementById("filtroRecord").onchange = RenderStagioneV2;
+      document.getElementById("filtroSquadra").onchange = RenderStagioneV2;
+      document.getElementById("filtroNumero").onchange = RenderStagioneV2;
+
+      RenderStagioneV2();
+      SRVSetTab("tabDettaglio");
     }
 
     function RenderStagioneV2() {
-      try {
-        var stagione = parseInt(document.getElementById("filtroStagione").value, 10);
-        var compId = parseInt(document.getElementById("filtroCompetizione").value, 10);
-        var record = document.getElementById("filtroRecord").value;
-        var squadra = document.getElementById("filtroSquadra").value;
-        var topN = SRVFiltroNumero("filtroNumero");
+      var stagione = parseInt(document.getElementById("filtroStagione").value, 10);
+      var compId = parseInt(document.getElementById("filtroCompetizione").value, 10);
+      var record = document.getElementById("filtroRecord").value;
+      var squadra = document.getElementById("filtroSquadra").value;
+      var topN = SRVFiltroNumero("filtroNumero");
 
-        SRV_STAGIONE_VISTA = SRVAnalizzaVista(stagione, compId);
+      SRV_STAGIONE_VISTA = SRVAnalizzaVista(stagione, compId);
 
-        SRVFillSquadre("filtroSquadra", SRV_STAGIONE_VISTA.stats, true);
-        document.getElementById("filtroSquadra").value = squadra;
-        if (document.getElementById("filtroSquadra").selectedIndex < 0) {
-          document.getElementById("filtroSquadra").value = "";
-          squadra = "";
-        }
-
-        var titoloComp = "Tutte le competizioni";
-        if (compId != 0) titoloComp = SRVNomeCompetizione(compId);
-
-        document.getElementById("infoFiltro").innerHTML =
-          "<b>Stagione:</b> " + stagione +
-          " - <b>Competizione:</b> " + SRVH(titoloComp) +
-          " - <b>Partite analizzate:</b> " + SRV_STAGIONE_VISTA.partite;
-
-        SRVRenderDettaglio("contenutoDettaglio", SRV_STAGIONE_VISTA, record, squadra, topN);
-        SRVRenderRiepilogo("contenutoRiepilogo", SRV_STAGIONE_VISTA, squadra);
-        document.getElementById("errorePagina").innerHTML = "";
-      } catch(e) {
-        document.getElementById("errorePagina").innerHTML = "<b>Errore JavaScript:</b> " + e.message;
+      SRVFillSquadre("filtroSquadra", SRV_STAGIONE_VISTA.stats, true);
+      document.getElementById("filtroSquadra").value = squadra;
+      if (document.getElementById("filtroSquadra").selectedIndex < 0) {
+        document.getElementById("filtroSquadra").value = "";
+        squadra = "";
       }
+
+      var titoloComp = "Tutte le competizioni";
+      if (compId != 0) titoloComp = SRVNomeCompetizione(compId);
+
+      document.getElementById("infoFiltro").innerHTML =
+        "<b>Stagione:</b> " + stagione +
+        " - <b>Competizione:</b> " + SRVH(titoloComp) +
+        " - <b>Partite analizzate:</b> " + SRV_STAGIONE_VISTA.partite;
+
+      SRVRenderDettaglio("contenutoDettaglio", SRV_STAGIONE_VISTA, record, squadra, topN);
+      SRVRenderRiepilogo("contenutoRiepilogo", SRV_STAGIONE_VISTA, squadra);
     }
   </script>
 </head>
@@ -93,7 +85,7 @@
     <h2>Record Soglie - Singola Stagione V2</h2>
 
     <p>
-      Vista con filtri, schede separate e nomi normalizzati delle competizioni.
+      Vista nuova con filtri, schede separate e nomi reali delle competizioni.
       Pagine di controllo:
       <a href="soglieRecord.htm">base</a> |
       <a href="soglieRecordStagione.htm">stagione vecchia</a> |
@@ -135,7 +127,6 @@
       </select>
     </div>
 
-    <div class="srv-note" id="errorePagina" style="color:red;"></div>
     <div class="srv-note" id="infoFiltro"></div>
 
     <div class="srv-tabs">

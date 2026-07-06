@@ -4,6 +4,7 @@
   Richiede:
   - persjs/fcmSoglieRecordFunzioni.js
   - persjs/fcmConfrontiDati.js
+  - persjs/fcmSoglieRecordConfigPlus.js (opzionale, generato da config ConfrontiStorici)
 */
 
 var SRV_RECORD_ORDER = [
@@ -45,6 +46,69 @@ var SRV_COMPETIZIONI_CORE = {
 };
 
 var SRV_COMP_ALTRE_ID = -1;
+
+
+function SRVHasConfigPlus() {
+  return (typeof SRP_CONFIG_PLUS_VERSION != "undefined");
+}
+
+function SRVObjHas(o, k) {
+  return o && Object.prototype.hasOwnProperty.call(o, String(k));
+}
+
+function SRVConfigCompetizioneAlbo(id) {
+  id = parseInt(id, 10);
+  if (typeof SRP_COMPETIZIONI_ALBO != "undefined" && SRVObjHas(SRP_COMPETIZIONI_ALBO, id)) {
+    return SRP_COMPETIZIONI_ALBO[String(id)];
+  }
+  return null;
+}
+
+function SRVConfigCartellaStagione(stagione) {
+  stagione = parseInt(stagione, 10);
+  if (typeof SRP_CARTELLE != "undefined" && SRVObjHas(SRP_CARTELLE, stagione)) {
+    var c = SRP_CARTELLE[String(stagione)];
+    if (c && c.cartellaSito) return String(c.cartellaSito);
+  }
+  return "";
+}
+
+function SRVNomeSquadraDaId(id, nomeFallback) {
+  id = parseInt(id, 10);
+  if (typeof SRP_SQUADRE_BY_ID != "undefined" && SRVObjHas(SRP_SQUADRE_BY_ID, id)) {
+    var s = SRP_SQUADRE_BY_ID[String(id)];
+    if (s && s.nomeAttuale) return String(s.nomeAttuale);
+  }
+  return String(nomeFallback == null ? "" : nomeFallback);
+}
+
+function SRVIdSquadraDaMatch(m, nome) {
+  if (!m) return null;
+  nome = String(nome == null ? "" : nome);
+
+  if (String(m.SquadraCasa) == nome) return m.IDASquadraCasa;
+  if (String(m.SquadraFuori) == nome) return m.IDASquadraFuori;
+
+  return null;
+}
+
+function SRVNomeSquadraDaMatch(m, nome) {
+  var id = SRVIdSquadraDaMatch(m, nome);
+  if (id != null && id !== "") return SRVNomeSquadraDaId(id, nome);
+  return String(nome == null ? "" : nome);
+}
+
+function SRVAddRow(rows, row) {
+  if (!row) return;
+
+  if (row.m) {
+    row.squadra = SRVNomeSquadraDaMatch(row.m, row.squadra);
+    row.avversario = SRVNomeSquadraDaMatch(row.m, row.avversario);
+    row.coinvolti = "|" + row.squadra + "|" + row.avversario + "|";
+  }
+
+  rows.push(row);
+}
 
 var SRV_METRICHE = {
   saldoFortuna: {
@@ -198,6 +262,9 @@ function SRVNomeCompetizione(id) {
   if (id == 0) return "Tutte le competizioni";
   if (id == SRV_COMP_ALTRE_ID) return "Altre competizioni";
 
+  var cfg = SRVConfigCompetizioneAlbo(id);
+  if (cfg && cfg.nome) return String(cfg.nome);
+
   if (SRV_COMPETIZIONI_CORE[id]) {
     return SRV_COMPETIZIONI_CORE[id].nome;
   }
@@ -211,6 +278,9 @@ function SRVOrdineCompetizione(id) {
   if (id == 0) return 0;
   if (id == SRV_COMP_ALTRE_ID) return 99;
 
+  var cfg = SRVConfigCompetizioneAlbo(id);
+  if (cfg && cfg.ordine != null) return parseInt(cfg.ordine, 10);
+
   if (SRV_COMPETIZIONI_CORE[id]) {
     return SRV_COMPETIZIONI_CORE[id].ordine;
   }
@@ -221,6 +291,7 @@ function SRVOrdineCompetizione(id) {
 function SRVCompetizioneNormalizzata(id) {
   id = parseInt(id, 10);
 
+  if (SRVConfigCompetizioneAlbo(id)) return id;
   if (SRV_COMPETIZIONI_CORE[id]) return id;
 
   return SRV_COMP_ALTRE_ID;
@@ -232,14 +303,23 @@ function SRVMatchCompetizione(idReale, filtroId) {
 
   if (filtroId == 0) return true;
 
+  var idNorm = SRVCompetizioneNormalizzata(idReale);
+
   if (filtroId == SRV_COMP_ALTRE_ID) {
-    return !SRV_COMPETIZIONI_CORE[idReale];
+    return idNorm == SRV_COMP_ALTRE_ID;
   }
 
-  return idReale == filtroId;
+  return idNorm == filtroId;
 }
 
 function SRVUrlGiornata(m) {
+  var cartellaCfg = SRVConfigCartellaStagione(m.Stagione);
+  if (cartellaCfg != "") {
+    var extCfg = "php";
+    if (typeof SOG_REP_EXT != "undefined") extCfg = SOG_REP_EXT;
+    return "../" + cartellaCfg + "/ris." + extCfg + "?Gio=" + m.GiornataA;
+  }
+
   if (typeof SogRepUrlGiornata == "function") return SogRepUrlGiornata(m);
 
   if (typeof SogRepCartellaStagione != "function") return "";
@@ -339,8 +419,8 @@ function SRVGetSquadreAttualiMap() {
     if (!m) continue;
     if (m.Stagione != ultima) continue;
 
-    map[m.SquadraCasa] = true;
-    map[m.SquadraFuori] = true;
+    map[SRVNomeSquadraDaId(m.IDASquadraCasa, m.SquadraCasa)] = true;
+    map[SRVNomeSquadraDaId(m.IDASquadraFuori, m.SquadraFuori)] = true;
   }
 
   return map;
@@ -397,17 +477,11 @@ function SRVBaseStats(stagione, compId) {
     if (stagione != 0 && m.Stagione != stagione) continue;
     if (!SRVMatchCompetizione(m.Competizione, compId)) continue;
 
-    SRVEnsureStat(map, m.SquadraCasa).giocate++;
-    SRVEnsureStat(map, m.SquadraFuori).giocate++;
+    SRVEnsureStat(map, SRVNomeSquadraDaId(m.IDASquadraCasa, m.SquadraCasa)).giocate++;
+    SRVEnsureStat(map, SRVNomeSquadraDaId(m.IDASquadraFuori, m.SquadraFuori)).giocate++;
   }
 
   return map;
-}
-
-
-function SRVAddRow(rows, row) {
-  if (!rows || !row) return;
-  rows.push(row);
 }
 
 function SRVBuildRowsFromAnalisi(res, compId) {

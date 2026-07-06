@@ -543,3 +543,85 @@ Decisioni registrate:
 - nessun wrapper necessario, basta comando PowerShell
 ```
 
+
+---
+
+## Aggiornamento 2026-07-06 - Avvio v1.2.0 Config Plus
+
+### Obiettivo operativo
+
+Separare definitivamente:
+
+```text
+file statici Plus = logica e viste
+file dati ConfrontiStorici = partite e risultati
+file dati Config Plus = associazioni storiche/attuali e cartelle sito
+```
+
+### Nuovo file generabile
+
+```text
+persjs/fcmSoglieRecordConfigPlus.js
+```
+
+Contiene, in formato JavaScript portabile sul sito:
+
+```text
+SRP_CARTELLE
+SRP_COMPETIZIONI
+SRP_COMPETIZIONI_ALBO
+SRP_PALMARES
+SRP_SQUADRE
+SRP_SQUADRE_BY_ID
+```
+
+### Nuovo tool
+
+```text
+tools/GeneraSoglieRecordConfigPlus.ps1
+```
+
+Uso previsto:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File "D:\DEV_APPS\ConfrontiStorici-3.x-Plus\tools\GeneraSoglieRecordConfigPlus.ps1" -ConfigRoot "C:\Users\mauz7\ConfrontiStorici\config" -SiteRoot "E:\fantacalcio\Lega2025"
+```
+
+Output:
+
+```text
+E:\fantacalcio\Lega2025\persjs\fcmSoglieRecordConfigPlus.js
+```
+
+### HTML aggiornati
+
+Le pagine V2 caricano ora anche:
+
+```html
+<script src="persjs/fcmSoglieRecordConfigPlus.js" type="text/javascript"></script>
+```
+
+tra:
+
+```html
+<script src="persjs/fcmConfrontiDati.js" type="text/javascript"></script>
+```
+
+e:
+
+```html
+<script src="persjs/fcmSoglieRecordVisteV2.js" type="text/javascript"></script>
+```
+
+### JS V2 aggiornato
+
+`fcmSoglieRecordVisteV2.js` ora usa `fcmSoglieRecordConfigPlus.js` quando disponibile per:
+
+```text
+- nomi e ordine competizioni da SRP_COMPETIZIONI_ALBO
+- cartelle stagione da SRP_CARTELLE
+- nome squadra attuale da SRP_SQUADRE_BY_ID
+- filtro solo squadre attuali con identita normalizzate
+```
+
+Se il file config Plus manca, resta attivo il fallback precedente.

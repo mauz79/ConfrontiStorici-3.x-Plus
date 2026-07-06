@@ -6,6 +6,7 @@
 
   <script src="persjs/fcmSoglieRecordFunzioni.js" type="text/javascript"></script>
   <script src="persjs/fcmConfrontiDati.js" type="text/javascript"></script>
+  <script src="persjs/fcmSoglieRecordConfigPlus.js" type="text/javascript"></script>
   <script src="persjs/fcmSoglieRecordVisteV2.js" type="text/javascript"></script>
 
   <link href="fcmmael.css" rel="stylesheet" type="text/css">
@@ -31,46 +32,37 @@
     var SRV_STORICO_VISTA = null;
 
     function InitStoricoV2() {
-      try {
-        SRVFillCompetizioni("filtroCompetizione", 0, true);
-        SRVFillMetriche("filtroRecordStorico");
+      SRVFillCompetizioni("filtroCompetizione", 0, true);
+      SRVFillMetriche("filtroRecordStorico");
 
-        document.getElementById("filtroCompetizione").onchange = RenderStoricoV2;
-        document.getElementById("filtroRecordStorico").onchange = RenderStoricoV2;
-        document.getElementById("filtroSquadreStorico").onchange = RenderStoricoV2;
-        document.getElementById("filtroNumero").onchange = RenderStoricoV2;
+      document.getElementById("filtroCompetizione").onchange = RenderStoricoV2;
+      document.getElementById("filtroRecordStorico").onchange = RenderStoricoV2;
+      document.getElementById("filtroSquadreStorico").onchange = RenderStoricoV2;
+      document.getElementById("filtroNumero").onchange = RenderStoricoV2;
 
-        RenderStoricoV2();
-        SRVSetTab("tabClassifiche");
-      } catch(e) {
-        document.getElementById("errorePagina").innerHTML = "<b>Errore JavaScript:</b> " + e.message;
-      }
+      RenderStoricoV2();
+      SRVSetTab("tabClassifiche");
     }
 
     function RenderStoricoV2() {
-      try {
-        var compId = parseInt(document.getElementById("filtroCompetizione").value, 10);
-        var metrica = document.getElementById("filtroRecordStorico").value;
-        var filtroSquadre = document.getElementById("filtroSquadreStorico").value;
-        var topN = SRVFiltroNumero("filtroNumero");
+      var compId = parseInt(document.getElementById("filtroCompetizione").value, 10);
+      var metrica = document.getElementById("filtroRecordStorico").value;
+      var filtroSquadre = document.getElementById("filtroSquadreStorico").value;
+      var topN = SRVFiltroNumero("filtroNumero");
 
-        SRV_STORICO_VISTA = SRVAnalizzaVista(0, compId);
+      SRV_STORICO_VISTA = SRVAnalizzaVista(0, compId);
 
-        var titoloComp = "Tutte le competizioni";
-        if (compId != 0) titoloComp = SRVNomeCompetizione(compId);
+      var titoloComp = "Tutte le competizioni";
+      if (compId != 0) titoloComp = SRVNomeCompetizione(compId);
 
-        document.getElementById("infoFiltro").innerHTML =
-          "<b>Storico completo</b>" +
-          " - <b>Competizione:</b> " + SRVH(titoloComp) +
-          " - <b>Partite analizzate:</b> " + SRV_STORICO_VISTA.partite +
-          " - <b>Squadre:</b> " + (filtroSquadre == "attuali" ? "solo attuali" : "tutte");
+      document.getElementById("infoFiltro").innerHTML =
+        "<b>Storico completo</b>" +
+        " - <b>Competizione:</b> " + SRVH(titoloComp) +
+        " - <b>Partite analizzate:</b> " + SRV_STORICO_VISTA.partite +
+        " - <b>Squadre:</b> " + (filtroSquadre == "attuali" ? "solo attuali" : "tutte");
 
-        SRVRenderClassifica("contenutoClassifiche", SRV_STORICO_VISTA, metrica, filtroSquadre, topN);
-        SRVRenderRiepilogo("contenutoRiepilogo", SRV_STORICO_VISTA, "");
-        document.getElementById("errorePagina").innerHTML = "";
-      } catch(e) {
-        document.getElementById("errorePagina").innerHTML = "<b>Errore JavaScript:</b> " + e.message;
-      }
+      SRVRenderClassifica("contenutoClassifiche", SRV_STORICO_VISTA, metrica, filtroSquadre, topN);
+      SRVRenderRiepilogo("contenutoRiepilogo", SRV_STORICO_VISTA, "");
     }
   </script>
 </head>
@@ -80,7 +72,7 @@
     <h2>Record Soglie - Storico V2</h2>
 
     <p>
-      Vista storica con filtro competizione, filtro squadre attuali/tutte, schede separate e riepilogo numerico.
+      Vista storica nuova con filtro competizione, filtro squadre attuali/tutte, schede separate e riepilogo numerico.
       Pagine di controllo:
       <a href="soglieRecord.htm">base</a> |
       <a href="soglieRecordStorico.htm">storico vecchio</a> |
@@ -120,7 +112,6 @@
       </select>
     </div>
 
-    <div class="srv-note" id="errorePagina" style="color:red;"></div>
     <div class="srv-note" id="infoFiltro"></div>
 
     <div class="srv-tabs">
