@@ -1,7 +1,7 @@
 ﻿// ============================================================
 // ConfrontiStorici Plus - Record Soglie - Config Plus
 // Versione generatore: v1.2.0-fix3-manuale
-// Generato il: 2026-07-06 18:36:02
+// Generato il: 2026-07-06 18:46:21
 //
 // Questo file e' generato dai file di configurazione LCS_conf_*.
 // Non modificarlo a mano: rigenerarlo quando cambia la config.
@@ -10,7 +10,7 @@
 var SRP_CONFIG_PLUS_VERSION = "v1.2.0-fix3-manuale";
 var SRP_CONFIG_PLUS = {
     "versione":  "v1.2.0-fix3-manuale",
-    "generatoIl":  "2026-07-06 18:36:02",
+    "generatoIl":  "2026-07-06 18:46:21",
     "note":  "File generato da GeneraSoglieRecordConfigPlus.ps1. Non modificare a mano.",
     "sorgenti":  {
                      "configRoot":  "C:\\Users\\mauz7\\ConfrontiStorici\\config",
@@ -21,7 +21,153 @@ var SRP_CONFIG_PLUS = {
                      "squadre":  "C:\\Users\\mauz7\\ConfrontiStorici\\config\\LCS_conf_squadre.txt"
                  },
     "cartelle":  {
-
+                     "01":  {
+                                "stagione":  "01",
+                                "squadreSalve":  -1,
+                                "archivioFcm":  "",
+                                "cartella":  "",
+                                "manuale":  true
+                            },
+                     "02":  {
+                                "stagione":  "02",
+                                "squadreSalve":  8,
+                                "archivioFcm":  "E:/FCM/data/Lega Reame Perduto 2006_2007-2-2006.fcm",
+                                "cartella":  "lega2006",
+                                "manuale":  false
+                            },
+                     "03":  {
+                                "stagione":  "03",
+                                "squadreSalve":  6,
+                                "archivioFcm":  "E:/FCM/data/AlterLega 2007_2008-3-2007.fcm",
+                                "cartella":  "lega2007",
+                                "manuale":  false
+                            },
+                     "04":  {
+                                "stagione":  "04",
+                                "squadreSalve":  8,
+                                "archivioFcm":  "E:/FCM/data/AlterLega 2008_2009-4-2008.fcm",
+                                "cartella":  "lega2008",
+                                "manuale":  false
+                            },
+                     "05":  {
+                                "stagione":  "05",
+                                "squadreSalve":  8,
+                                "archivioFcm":  "E:/FCM/data/AlterLega 2009_2010-5-2009.fcm",
+                                "cartella":  "lega2009",
+                                "manuale":  false
+                            },
+                     "06":  {
+                                "stagione":  "06",
+                                "squadreSalve":  8,
+                                "archivioFcm":  "E:/FCM/data/AlterLega 2010_2011-6-2010.fcm",
+                                "cartella":  "lega2010",
+                                "manuale":  false
+                            },
+                     "07":  {
+                                "stagione":  "07",
+                                "squadreSalve":  8,
+                                "archivioFcm":  "E:/FCM/data/AlterLega 2011_2012-7-2011.fcm",
+                                "cartella":  "lega2011",
+                                "manuale":  false
+                            },
+                     "08":  {
+                                "stagione":  "08",
+                                "squadreSalve":  8,
+                                "archivioFcm":  "E:/FCM/data/AlterLega 2012_2013-8-2012.fcm",
+                                "cartella":  "lega2012",
+                                "manuale":  false
+                            },
+                     "09":  {
+                                "stagione":  "09",
+                                "squadreSalve":  8,
+                                "archivioFcm":  "E:/FCM/data/AlterLega 2013_2014-9-2013.fcm",
+                                "cartella":  "lega2013",
+                                "manuale":  false
+                            },
+                     "10":  {
+                                "stagione":  "10",
+                                "squadreSalve":  8,
+                                "archivioFcm":  "E:/FCM/data/AlterLega 2014_2015-10-2014.fcm",
+                                "cartella":  "lega2014",
+                                "manuale":  false
+                            },
+                     "11":  {
+                                "stagione":  "11",
+                                "squadreSalve":  8,
+                                "archivioFcm":  "E:/FCM/data/AlterLega 2015_2016-11-2015.fcm",
+                                "cartella":  "lega2015",
+                                "manuale":  false
+                            },
+                     "12":  {
+                                "stagione":  "12",
+                                "squadreSalve":  8,
+                                "archivioFcm":  "E:/FCM/data/AlterLega 2016_2017-12-2016.fcm",
+                                "cartella":  "lega2016",
+                                "manuale":  false
+                            },
+                     "13":  {
+                                "stagione":  "13",
+                                "squadreSalve":  8,
+                                "archivioFcm":  "E:/FCM/data/AlterLega 2017_2018-13-2017.fcm",
+                                "cartella":  "lega2017",
+                                "manuale":  false
+                            },
+                     "14":  {
+                                "stagione":  "14",
+                                "squadreSalve":  8,
+                                "archivioFcm":  "E:/FCM/data/AlterLega 2018_2019-14-2018.fcm",
+                                "cartella":  "lega2018",
+                                "manuale":  false
+                            },
+                     "15":  {
+                                "stagione":  "15",
+                                "squadreSalve":  8,
+                                "archivioFcm":  "E:/FCM/data/AlterLega 2019_2020-15-2019.fcm",
+                                "cartella":  "lega2019",
+                                "manuale":  false
+                            },
+                     "16":  {
+                                "stagione":  "16",
+                                "squadreSalve":  8,
+                                "archivioFcm":  "E:/FCM/data/AlterLega 2020_2021-16-2020.fcm",
+                                "cartella":  "lega2020",
+                                "manuale":  false
+                            },
+                     "17":  {
+                                "stagione":  "17",
+                                "squadreSalve":  8,
+                                "archivioFcm":  "E:/FCM/data/AlterLega 2021_2022-17-2021.fcm",
+                                "cartella":  "lega2021",
+                                "manuale":  false
+                            },
+                     "18":  {
+                                "stagione":  "18",
+                                "squadreSalve":  8,
+                                "archivioFcm":  "E:/FCM/data/AlterLega 2022_2023-18-2022.fcm",
+                                "cartella":  "lega2022",
+                                "manuale":  false
+                            },
+                     "19":  {
+                                "stagione":  "19",
+                                "squadreSalve":  8,
+                                "archivioFcm":  "E:/FCM/data/AlterLega 2023_2024-19-2023.fcm",
+                                "cartella":  "lega2023",
+                                "manuale":  false
+                            },
+                     "20":  {
+                                "stagione":  "20",
+                                "squadreSalve":  8,
+                                "archivioFcm":  "E:/FCM/data/AlterLega 2024_2025-20-2024.fcm",
+                                "cartella":  "lega2024",
+                                "manuale":  false
+                            },
+                     "21":  {
+                                "stagione":  "21",
+                                "squadreSalve":  8,
+                                "archivioFcm":  "E:/FCM/data/AlterLega 2025_2026-21-2025.fcm",
+                                "cartella":  "lega2025",
+                                "manuale":  false
+                            }
                  },
     "competizioni":  {
                          "02":  {

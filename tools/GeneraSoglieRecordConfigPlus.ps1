@@ -41,10 +41,14 @@ function To-IntOrNull {
 
 function Add-HashtableValue {
   param(
-    [hashtable]$Table,
+    $Table,
     [string]$Key,
     $Value
   )
+
+  if ($null -eq $Table) {
+    return
+  }
 
   if ($Key -eq "") {
     return
@@ -129,23 +133,47 @@ $squadreById = [ordered]@{}
 # 01,-1, ,
 # ------------------------------------------------------------
 
-$rowsCartelle = Read-LcsRows -Path $configCartelle -Headers @(
-  "Stagione",
-  "SquadreSalve",
-  "ArchivioFcm",
-  "CartellaSito"
-)
+$lineNoCartelle = 0
 
-foreach ($r in $rowsCartelle) {
-  $stagione = Clean-Value $r.Stagione
+Get-Content -Path $configCartelle -Encoding Default | ForEach-Object {
+  $lineNoCartelle++
+  $line = [string]$_
+  $trim = $line.Trim()
 
-  if ($stagione -eq "") {
-    continue
+  if ($trim -eq "") {
+    return
   }
 
-  $squadreSalve = To-IntOrNull $r.SquadreSalve
-  $archivioFcm = Clean-Value $r.ArchivioFcm
-  $cartellaSito = Clean-Value $r.CartellaSito
+  if ($trim.StartsWith("*")) {
+    return
+  }
+
+  $parts = $line.Split(",")
+
+  if ($parts.Count -lt 1) {
+    return
+  }
+
+  $stagione = Clean-Value $parts[0]
+
+  if ($stagione -eq "") {
+    return
+  }
+
+  $squadreSalve = $null
+  if ($parts.Count -ge 2) {
+    $squadreSalve = To-IntOrNull $parts[1]
+  }
+
+  $archivioFcm = ""
+  if ($parts.Count -ge 3) {
+    $archivioFcm = Clean-Value $parts[2]
+  }
+
+  $cartellaSito = ""
+  if ($parts.Count -ge 4) {
+    $cartellaSito = Clean-Value $parts[3]
+  }
 
   $isManuale = $false
 
@@ -309,6 +337,69 @@ foreach ($r in $rowsSquadre) {
       $arr += $stagione
       $squadreById[$idKey].stagioni = $arr
     }
+  }
+}
+
+# ------------------------------------------------------------
+# Fallback robusto cartelle
+# Se per qualsiasi motivo il parser precedente non ha popolato
+# $cartelle, rilegge LCS_conf_cartelle.txt con split manuale.
+# ------------------------------------------------------------
+
+if ($cartelle.Count -eq 0) {
+  Get-Content -Path $configCartelle -Encoding Default | ForEach-Object {
+    $line = [string]$_
+    $trim = $line.Trim()
+
+    if ($trim -eq "") {
+      return
+    }
+
+    if ($trim.StartsWith("*")) {
+      return
+    }
+
+    $parts = $line.Split(",")
+
+    if ($parts.Count -lt 1) {
+      return
+    }
+
+    $stagione = Clean-Value $parts[0]
+
+    if ($stagione -eq "") {
+      return
+    }
+
+    $squadreSalve = $null
+    if ($parts.Count -ge 2) {
+      $squadreSalve = To-IntOrNull $parts[1]
+    }
+
+    $archivioFcm = ""
+    if ($parts.Count -ge 3) {
+      $archivioFcm = Clean-Value $parts[2]
+    }
+
+    $cartellaSito = ""
+    if ($parts.Count -ge 4) {
+      $cartellaSito = Clean-Value $parts[3]
+    }
+
+    $isManuale = $false
+    if ($archivioFcm -eq "" -or $cartellaSito -eq "") {
+      $isManuale = $true
+    }
+
+    $entry = [ordered]@{
+      stagione = $stagione
+      squadreSalve = $squadreSalve
+      archivioFcm = $archivioFcm
+      cartella = $cartellaSito
+      manuale = $isManuale
+    }
+
+    Add-HashtableValue -Table $cartelle -Key $stagione -Value $entry
   }
 }
 
