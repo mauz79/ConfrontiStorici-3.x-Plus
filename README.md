@@ -1,120 +1,213 @@
-# Record Soglie per ConfrontiStorici
+# ConfrontiStorici 3.x Plus - Record Soglie
 
-Estensione non ufficiale per siti Fantacalcio Manager generati con **ConfrontiStorici 3.x**.
+Modulo aggiuntivo non ufficiale per **ConfrontiStorici 3.x**, plugin per Fantacalcio Manager.
 
-Aggiunge nuove pagine statistiche basate sui dati gia' generati da ConfrontiStorici, senza modificare il plugin originale.
+Questa estensione aggiunge nuove viste statistiche basate sui dati gia' generati da ConfrontiStorici, senza modificare il plugin originale.
 
----
+## Credits
 
-## Funzioni principali
+**ConfrontiStorici 3.4** e' il plugin originale per Fantacalcio Manager sviluppato da **Lukesky (L.T.)**.
 
-- Botte di culo / Indice di fortuna
-- Sindrome di Fantozzi / Indice di sfortuna
+Questo progetto, **ConfrontiStorici 3.x Plus - Record Soglie**, e' un modulo aggiuntivo non ufficiale creato e mantenuto da **mauz79**.
+
+Il progetto Plus non sostituisce ConfrontiStorici e non contiene il plugin originale: usa gli output JavaScript prodotti da ConfrontiStorici per generare nuove classifiche e nuove visualizzazioni.
+
+## Cosa aggiunge
+
+Il modulo aggiunge due nuove pagine HTML:
+
+- `soglieRecordStagioneV2.htm`
+- `soglieRecordStoricoV2.htm`
+
+piu' due file JavaScript:
+
+- `persjs/fcmSoglieRecordFunzioni.js`
+- `persjs/fcmSoglieRecordVisteV2.js`
+
+Le nuove viste calcolano record e riepiloghi su:
+
+- Botte di culo / indice fortuna
+- Sindrome di Fantozzi / indice sfortuna
 - Vittorie chirurgiche
 - Pareggi miracolati
 - Sconfitte beffa
 - Pareggi stretti
-- Soglie precise / Tiratori scelti
-- Spreco punti in vittorie
+- Soglie precise
+- Spreco punti
 - Fattore campo decisivo
 - Riepiloghi numerici per stagione, competizione e squadra
-- Classifiche storiche aggregate
-- Dettaglio gara per gara con link al tabellino
-
----
+- Classifiche storiche con filtro squadre attuali / tutte
+- Dettaglio gare con link ai tabellini del sito
 
 ## Requisiti
 
-Serve un sito Fantacalcio Manager con **ConfrontiStorici 3.x** funzionante.
+Serve un sito Fantacalcio Manager con **ConfrontiStorici 3.x** gia' installato e funzionante.
 
-Il file richiesto e':
-
-```text
-persjs/fcmConfrontiDati.js
-```
-
-Il file deve contenere l'array:
-
-```javascript
-arrConfronti
-```
-
----
-
-## Installazione
-
-Copia i file JS nella cartella `persjs` del sito:
+In particolare, nella cartella `persjs` del sito deve essere presente il file generato da ConfrontiStorici:
 
 ```text
-<ROOT_SITO>/persjs/fcmSoglieRecordFunzioni.js
-<ROOT_SITO>/persjs/fcmSoglieRecordVisteV2.js
+<ROOT_SITO>\persjs\fcmConfrontiDati.js
 ```
 
-Copia gli HTML nella root del sito:
+Il modulo legge principalmente l'array `arrConfronti` prodotto da ConfrontiStorici.
+
+## Struttura della repository
 
 ```text
-<ROOT_SITO>/soglieRecordStagioneV2.htm
-<ROOT_SITO>/soglieRecordStoricoV2.htm
+ConfrontiStorici-3.x-Plus/
+|
+|-- README.md
+|
+|-- docs/
+|   |-- RecordSoglie_INSTALLAZIONE.md
+|   `-- RecordSoglie_WALKTHROUGH_COMPLETO.md
+|
+`-- dist/
+    |-- soglieRecordStagioneV2.htm
+    |-- soglieRecordStoricoV2.htm
+    `-- persjs/
+        |-- fcmSoglieRecordFunzioni.js
+        `-- fcmSoglieRecordVisteV2.js
 ```
 
-Esempio Windows:
+## Installazione rapida
+
+Copiare i file JavaScript:
+
+```text
+dist\persjs\fcmSoglieRecordFunzioni.js
+dist\persjs\fcmSoglieRecordVisteV2.js
+```
+
+nella cartella:
+
+```text
+<ROOT_SITO>\persjs\
+```
+
+Copiare le pagine HTML:
+
+```text
+dist\soglieRecordStagioneV2.htm
+dist\soglieRecordStoricoV2.htm
+```
+
+nella root del sito:
+
+```text
+<ROOT_SITO>\
+```
+
+Esempio:
 
 ```text
 E:\fantacalcio\Lega2025\persjs\fcmSoglieRecordFunzioni.js
 E:\fantacalcio\Lega2025\persjs\fcmSoglieRecordVisteV2.js
+
 E:\fantacalcio\Lega2025\soglieRecordStagioneV2.htm
 E:\fantacalcio\Lega2025\soglieRecordStoricoV2.htm
 ```
 
-Apri poi:
+Poi aprire nel browser:
 
 ```text
-soglieRecordStagioneV2.htm
-soglieRecordStoricoV2.htm
+<ROOT_SITO>\soglieRecordStagioneV2.htm
+<ROOT_SITO>\soglieRecordStoricoV2.htm
 ```
 
----
+## Come funziona
 
-## Pagine incluse
+Il modulo non legge direttamente i database `.fcm` e non modifica il plugin originale.
+
+La logica e':
+
+1. ConfrontiStorici genera i suoi normali output nella cartella `persjs`.
+2. Questo modulo carica `fcmConfrontiDati.js`.
+3. Le nuove funzioni leggono `arrConfronti`.
+4. Le pagine Plus calcolano nuove classifiche e riepiloghi.
+
+## Pagine disponibili
 
 ### `soglieRecordStagioneV2.htm`
 
-Vista per singola stagione.
-
-Filtri:
+Vista per singola stagione, con filtri per:
 
 - stagione
 - competizione
-- record
+- tipo record
 - squadra
-- numero risultati
+- numero record da mostrare
 
-Schede:
+Mostra:
 
-- dettaglio record
+- dettaglio gara per gara
 - riepilogo numerico
+- link ai tabellini del sito
 
 ### `soglieRecordStoricoV2.htm`
 
-Vista storica aggregata.
-
-Filtri:
+Vista storica aggregata, con filtri per:
 
 - competizione
 - record/classifica
 - solo squadre attuali / tutte le squadre
-- numero risultati
+- numero di risultati da mostrare
 
-Schede:
+Mostra:
 
 - classifiche aggregate
-- riepilogo numerico
+- riepilogo numerico storico
 
----
+## Regole principali implementate
 
-## Competizioni
+### Vittoria chirurgica
 
-Le competizioni principali vengono normalizzate e mostrate con nomi leggibili:
+Vittoria di un solo gol con squadra esattamente sulla soglia e avversario a -0,5 dalla stessa soglia.
+
+Esempi:
+
+```text
+66 - 65,5 = 1-0
+72 - 71,5 = 2-1
+77 - 76,5 = 3-2
+```
+
+### Pareggio miracolato
+
+Pareggio ottenuto da chi raggiunge esattamente la propria soglia, mentre l'avversario, pur facendo piu' punti, manca la soglia successiva per 0,5.
+
+### Sconfitta beffa
+
+Sconfitta di un solo gol con avversario esatto sulla soglia e squadra a -0,5 dalla stessa soglia.
+
+### Pareggio stretto
+
+Pareggio subito da chi fa piu' punti, resta a -0,5 dalla soglia successiva e trova l'avversario sulla propria soglia.
+
+### Soglia precisa
+
+Prestazione chiusa esattamente su una soglia gol.
+
+Soglie usate:
+
+```text
+66, 72, 77, 81, 85, 89, 93, 97, 101, 105, 109, 113
+```
+
+### Fattore campo decisivo
+
+Partita in cui il bonus casa cambia il risultato rispetto alla simulazione a campi invertiti.
+
+La simulazione usa:
+
+```text
+casa originale - 1
+trasferta originale + 1
+```
+
+## Note sulle competizioni
+
+Le competizioni principali sono normalizzate cosi':
 
 ```text
 Serie A
@@ -131,99 +224,14 @@ Supercoppa Serie C
 Altre competizioni
 ```
 
-Le competizioni non mappate vengono aggregate in `Altre competizioni`.
+Le competizioni non riconosciute vengono aggregate in **Altre competizioni**.
 
----
+## Stato del progetto
 
-## Definizioni dei record
+Prima release pubblica: **v1.0.0**.
 
-### Vittoria chirurgica
+Il modulo e' pensato come estensione leggera e non invasiva: il plugin originale resta intatto.
 
-Vittoria di un solo gol con squadra esattamente sulla soglia e avversario a -0,5 dalla stessa soglia.
+## Licenza e responsabilita'
 
-Esempio:
-
-```text
-66 - 65,5 = 1-0
-72 - 71,5 = 2-1
-```
-
-### Pareggio miracolato
-
-Pareggio ottenuto da chi raggiunge esattamente la propria soglia mentre l'avversario, pur facendo piu punti, manca la soglia successiva per 0,5.
-
-### Sconfitta beffa
-
-Sconfitta di un solo gol con avversario esatto sulla soglia e squadra a -0,5 dalla stessa soglia.
-
-### Pareggio stretto
-
-Pareggio subito da chi fa piu punti, resta a -0,5 dalla soglia successiva e trova l'avversario esatto sulla propria soglia.
-
-### Soglia precisa
-
-Prestazione chiusa esattamente su una soglia gol:
-
-```text
-66, 72, 77, 81, 85, 89, ...
-```
-
-### Fattore campo decisivo
-
-Confronta il risultato reale con una simulazione a campi invertiti:
-
-```text
-Casa -1
-Trasferta +1
-```
-
-Se il risultato cambia, il fattore campo e' considerato decisivo.
-
----
-
-## Link ai tabellini
-
-Le righe di dettaglio includono link ai tabellini/giornate del sito.
-
-Il formato e':
-
-```text
-../<cartella_stagione>/ris.<estensione>?Gio=<giornata>
-```
-
-Per cambiare estensione da `php` a `htm`, modificare nel file base:
-
-```javascript
-var SOG_REP_EXT = "php";
-```
-
-in:
-
-```javascript
-var SOG_REP_EXT = "htm";
-```
-
----
-
-## Sicurezza
-
-La soluzione non modifica:
-
-- il plugin originale;
-- il JAR/EXE di ConfrontiStorici;
-- i file `.fcm`;
-- i dati generati da ConfrontiStorici.
-
-Aggiunge solo file JS/HTML al sito.
-
----
-
-## Licenza
-
-Da definire.
-
----
-
-## Stato
-
-Versione V2 funzionante come vista esterna sopra ConfrontiStorici 3.x.
+Questo progetto e' distribuito come modulo aggiuntivo non ufficiale. Verificare la compatibilita' con la propria installazione di Fantacalcio Manager e ConfrontiStorici prima dell'uso in produzione.
