@@ -1,188 +1,387 @@
 param(
-  [string]$ConfigRoot = "$env:USERPROFILE\ConfrontiStorici\config",
-  [string]$SiteRoot = "",
+  [Parameter(Mandatory=$true)]
+  [string]$ConfigRoot,
+
+  [Parameter(Mandatory=$true)]
+  [string]$SiteRoot,
+
   [string]$OutputPath = ""
 )
 
-Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
 
-function Test-RequiredFile {
-  param([string]$Path)
-  if (-not (Test-Path -LiteralPath $Path)) {
-    throw "File non trovato: $Path"
+$ScriptVersion = "v1.2.0-fix3-manuale"
+
+function Clean-Value {
+  param($Value)
+
+  if ($null -eq $Value) {
+    return ""
   }
+
+  return ([string]$Value).Trim()
 }
 
-function Read-ConfigCsvLines {
+function To-IntOrNull {
+  param($Value)
+
+  $s = Clean-Value $Value
+
+  if ($s -eq "") {
+    return $null
+  }
+
+  $n = 0
+  if ([int]::TryParse($s, [ref]$n)) {
+    return $n
+  }
+
+  return $null
+}
+
+function Add-HashtableValue {
+  param(
+    [hashtable]$Table,
+    [string]$Key,
+    $Value
+  )
+
+  if ($Key -eq "") {
+    return
+  }
+
+  $Table[$Key] = $Value
+}
+
+function Read-LcsRows {
   param(
     [string]$Path,
     [string[]]$Headers
   )
 
-  Test-RequiredFile $Path
+  if (!(Test-Path $Path)) {
+    throw "File non trovato: $Path"
+  }
 
   $rows = @()
-  $lines = Get-Content -LiteralPath $Path -Encoding Default
+  $lineNo = 0
 
-  foreach ($lineRaw in $lines) {
-    $line = $lineRaw.Trim()
-    if ($line -eq "") { continue }
-    if ($line.StartsWith("*")) { continue }
+  Get-Content -Path $Path -Encoding Default | ForEach-Object {
+    $lineNo++
+    $line = [string]$_
+    $trim = $line.Trim()
 
-    $obj = $line | ConvertFrom-Csv -Header $Headers
-    $rows += $obj
+    if ($trim -eq "") {
+      return
+    }
+
+    if ($trim.StartsWith("*")) {
+      return
+    }
+
+    try {
+      $parsed = ConvertFrom-Csv -InputObject $line -Header $Headers
+      $rows += $parsed
+    }
+    catch {
+      Write-Warning "Riga ignorata in $Path alla riga ${lineNo}: $line"
+    }
   }
 
   return $rows
 }
 
-function Add-HashtableValue {
-  param(
-    [hashtable]$Map,
-    [string]$Key,
-    [object]$Value
-  )
-  if ($Map.ContainsKey($Key)) {
-    $Map[$Key] = $Value
-  } else {
-    $Map.Add($Key, $Value)
+function Ensure-Directory {
+  param([string]$Path)
+
+  if (!(Test-Path $Path)) {
+    New-Item -ItemType Directory -Path $Path | Out-Null
   }
 }
 
-function ConvertTo-JsLiteral {
-  param([object]$Value)
-  return ($Value | ConvertTo-Json -Depth 30 -Compress)
-}
+function Json-Escape-For-Js {
+  param([string]$Json)
 
-if ($OutputPath -eq "") {
-  if ($SiteRoot -eq "") {
-    throw "Specificare -SiteRoot oppure -OutputPath."
+  if ($null -eq $Json) {
+    return "{}"
   }
-  $OutputPath = Join-Path $SiteRoot "persjs\fcmSoglieRecordConfigPlus.js"
+
+  return $Json
 }
 
-$cartellePath = Join-Path $ConfigRoot "LCS_conf_cartelle.txt"
-$competizioniPath = Join-Path $ConfigRoot "LCS_conf_competizioni.txt"
-$squadrePath = Join-Path $ConfigRoot "LCS_conf_squadre.txt"
-$palmaresPath = Join-Path $ConfigRoot "LCS_conf_palmares.txt"
+$configCartelle = Join-Path $ConfigRoot "LCS_conf_cartelle.txt"
+$configCompetizioni = Join-Path $ConfigRoot "LCS_conf_competizioni.txt"
+$configPalmares = Join-Path $ConfigRoot "LCS_conf_palmares.txt"
+$configSquadre = Join-Path $ConfigRoot "LCS_conf_squadre.txt"
 
-$cartelleRows = Read-ConfigCsvLines $cartellePath @("Stagione","SquadreSalve","ArchivioFcm","CartellaSito")
-$competizioniRows = Read-ConfigCsvLines $competizioniPath @("Stagione","IdCompetizioneStagione","IdCompetizioneAlbo","NomeCompetizione")
-$squadreRows = Read-ConfigCsvLines $squadrePath @("Stagione","PosizioneStagione","IdAttuale","NomeAttuale","Allenatore")
-$palmaresRows = @()
-if (Test-Path -LiteralPath $palmaresPath) {
-  $palmaresRows = Read-ConfigCsvLines $palmaresPath @("IdCompetizioneAlbo","Label","Icona")
-}
+$cartelle = [ordered]@{}
+$competizioni = [ordered]@{}
+$competizioniAlbo = [ordered]@{}
+$palmares = [ordered]@{}
+$squadre = [ordered]@{}
+$squadreById = [ordered]@{}
 
-$cartelle = @{}
-foreach ($r in $cartelleRows) {
-  $stag = $r.Stagione.Trim()
-  if ($stag -eq "") { continue }
+# ------------------------------------------------------------
+# Cartelle stagioni
+# Formato:
+# Stagione, Squadre Salve, Nome Archivio FCM, Cartella Sito su Server
+# Esempio manuale ammesso:
+# 01,-1, ,
+# ------------------------------------------------------------
+
+$rowsCartelle = Read-LcsRows -Path $configCartelle -Headers @(
+  "Stagione",
+  "SquadreSalve",
+  "ArchivioFcm",
+  "CartellaSito"
+)
+
+foreach ($r in $rowsCartelle) {
+  $stagione = Clean-Value $r.Stagione
+
+  if ($stagione -eq "") {
+    continue
+  }
+
+  $squadreSalve = To-IntOrNull $r.SquadreSalve
+  $archivioFcm = Clean-Value $r.ArchivioFcm
+  $cartellaSito = Clean-Value $r.CartellaSito
+
+  $isManuale = $false
+
+  if ($archivioFcm -eq "" -or $cartellaSito -eq "") {
+    $isManuale = $true
+  }
+
   $entry = [ordered]@{
-    stagione = [int]$stag
-    squadreSalve = [int]$r.SquadreSalve
-    archivioFcm = $r.ArchivioFcm.Trim()
-    cartellaSito = $r.CartellaSito.Trim()
+    stagione = $stagione
+    squadreSalve = $squadreSalve
+    archivioFcm = $archivioFcm
+    cartella = $cartellaSito
+    manuale = $isManuale
   }
-  Add-HashtableValue $cartelle $stag $entry
+
+  Add-HashtableValue -Table $cartelle -Key $stagione -Value $entry
 }
 
-$competizioni = @{}
-$competizioniAlbo = @{}
-$ordineAlbo = @{}
-$ordine = 1
-foreach ($r in $competizioniRows) {
-  $stag = $r.Stagione.Trim()
-  $idStag = $r.IdCompetizioneStagione.Trim()
-  $idAlbo = $r.IdCompetizioneAlbo.Trim()
-  $nome = $r.NomeCompetizione.Trim()
-  if ($stag -eq "" -or $idStag -eq "" -or $idAlbo -eq "") { continue }
+# ------------------------------------------------------------
+# Competizioni
+# Formato:
+# Stagione, Id Competizione in stagione, Id Competizione in Albo D'Oro, Nome Competizione
+# ------------------------------------------------------------
 
-  if (-not $competizioni.ContainsKey($stag)) { $competizioni[$stag] = @{} }
-  $competizioni[$stag][$idStag] = [ordered]@{
-    stagione = [int]$stag
-    idCompetizioneStagione = [int]$idStag
-    idCompetizioneAlbo = [int]$idAlbo
+$rowsCompetizioni = Read-LcsRows -Path $configCompetizioni -Headers @(
+  "Stagione",
+  "IdCompetizioneStagione",
+  "IdCompetizioneAlbo",
+  "NomeCompetizione"
+)
+
+foreach ($r in $rowsCompetizioni) {
+  $stagione = Clean-Value $r.Stagione
+  $idStagionale = To-IntOrNull $r.IdCompetizioneStagione
+  $idAlbo = To-IntOrNull $r.IdCompetizioneAlbo
+  $nome = Clean-Value $r.NomeCompetizione
+
+  if ($stagione -eq "" -or $null -eq $idStagionale) {
+    continue
+  }
+
+  if (!$competizioni.Contains($stagione)) {
+    $competizioni[$stagione] = [ordered]@{}
+  }
+
+  $entry = [ordered]@{
+    stagione = $stagione
+    idStagionale = $idStagionale
+    idAlbo = $idAlbo
     nome = $nome
   }
 
-  if ([int]$idAlbo -ge 0 -and -not $competizioniAlbo.ContainsKey($idAlbo)) {
-    $competizioniAlbo[$idAlbo] = [ordered]@{
-      idCompetizioneAlbo = [int]$idAlbo
-      nome = $nome
-      ordine = $ordine
+  $competizioni[$stagione][[string]$idStagionale] = $entry
+
+  if ($null -ne $idAlbo -and $idAlbo -gt 0) {
+    $idAlboKey = [string]$idAlbo
+
+    if (!$competizioniAlbo.Contains($idAlboKey)) {
+      $competizioniAlbo[$idAlboKey] = [ordered]@{
+        idAlbo = $idAlbo
+        nome = $nome
+      }
     }
-    $ordineAlbo[$idAlbo] = $ordine
-    $ordine++
   }
 }
 
-$palmares = @{}
-foreach ($r in $palmaresRows) {
-  $id = $r.IdCompetizioneAlbo.Trim()
-  if ($id -eq "") { continue }
-  $palmares[$id] = [ordered]@{
-    idCompetizioneAlbo = [int]$id
-    label = $r.Label.Trim()
-    icona = $r.Icona.Trim()
+# ------------------------------------------------------------
+# Palmares
+# Formato:
+# IdCompetizioneAlbo, Label, Icona
+# ------------------------------------------------------------
+
+$rowsPalmares = Read-LcsRows -Path $configPalmares -Headers @(
+  "IdCompetizioneAlbo",
+  "Label",
+  "Icona"
+)
+
+foreach ($r in $rowsPalmares) {
+  $idAlbo = To-IntOrNull $r.IdCompetizioneAlbo
+  $label = Clean-Value $r.Label
+  $icona = Clean-Value $r.Icona
+
+  if ($null -eq $idAlbo) {
+    continue
   }
-}
 
-$squadre = @{}
-$squadreById = @{}
-foreach ($r in $squadreRows) {
-  $stag = $r.Stagione.Trim()
-  $pos = $r.PosizioneStagione.Trim()
-  $idAtt = $r.IdAttuale.Trim()
-  $nome = $r.NomeAttuale.Trim()
-  if ($stag -eq "" -or $pos -eq "" -or $idAtt -eq "") { continue }
+  if ($idAlbo -le 0) {
+    continue
+  }
 
-  if (-not $squadre.ContainsKey($stag)) { $squadre[$stag] = @{} }
   $entry = [ordered]@{
-    stagione = [int]$stag
-    posizioneStagione = [int]$pos
-    idAttuale = [int]$idAtt
-    nomeAttuale = $nome
-    allenatore = $r.Allenatore.Trim()
+    idAlbo = $idAlbo
+    label = $label
+    icona = $icona
   }
-  $squadre[$stag][$pos] = $entry
 
-  if ([int]$idAtt -ge 0 -and -not $squadreById.ContainsKey($idAtt)) {
-    $squadreById[$idAtt] = [ordered]@{
-      idAttuale = [int]$idAtt
-      nomeAttuale = $nome
+  $palmares[[string]$idAlbo] = $entry
+
+  if (!$competizioniAlbo.Contains([string]$idAlbo)) {
+    $competizioniAlbo[[string]$idAlbo] = [ordered]@{
+      idAlbo = $idAlbo
+      nome = $label
     }
   }
 }
 
-$generatedAt = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-$outDir = Split-Path -Parent $OutputPath
-if ($outDir -ne "" -and -not (Test-Path -LiteralPath $outDir)) {
-  New-Item -ItemType Directory -Path $outDir -Force | Out-Null
+# ------------------------------------------------------------
+# Squadre
+# Formato:
+# Stagione, Posizione in Stagione, Posizione attuale in albo d'oro,
+# Nome Attuale in Albo D'oro, Nome Allenatore
+# ------------------------------------------------------------
+
+$rowsSquadre = Read-LcsRows -Path $configSquadre -Headers @(
+  "Stagione",
+  "PosizioneStagione",
+  "IdAttuale",
+  "NomeAttuale",
+  "Allenatore"
+)
+
+foreach ($r in $rowsSquadre) {
+  $stagione = Clean-Value $r.Stagione
+  $posizioneStagione = To-IntOrNull $r.PosizioneStagione
+  $idAttuale = To-IntOrNull $r.IdAttuale
+  $nomeAttuale = Clean-Value $r.NomeAttuale
+  $allenatore = Clean-Value $r.Allenatore
+
+  if ($stagione -eq "" -or $null -eq $posizioneStagione) {
+    continue
+  }
+
+  if (!$squadre.Contains($stagione)) {
+    $squadre[$stagione] = [ordered]@{}
+  }
+
+  $entry = [ordered]@{
+    stagione = $stagione
+    posizioneStagione = $posizioneStagione
+    idAttuale = $idAttuale
+    nomeAttuale = $nomeAttuale
+    allenatore = $allenatore
+  }
+
+  $squadre[$stagione][[string]$posizioneStagione] = $entry
+
+  if ($null -ne $idAttuale -and $idAttuale -gt 0) {
+    $idKey = [string]$idAttuale
+
+    if (!$squadreById.Contains($idKey)) {
+      $squadreById[$idKey] = [ordered]@{
+        idAttuale = $idAttuale
+        nomeAttuale = $nomeAttuale
+        stagioni = @()
+      }
+    }
+
+    $arr = @($squadreById[$idKey].stagioni)
+    if ($arr -notcontains $stagione) {
+      $arr += $stagione
+      $squadreById[$idKey].stagioni = $arr
+    }
+  }
 }
 
-$content = @()
-$content += "/*"
-$content += "  fcmSoglieRecordConfigPlus.js"
-$content += "  Generato da GeneraSoglieRecordConfigPlus.ps1"
-$content += "  Data generazione: $generatedAt"
-$content += "  Fonte config: $ConfigRoot"
-$content += "*/"
-$content += ""
-$content += "var SRP_CONFIG_PLUS_VERSION = '1.2.0';"
-$content += "var SRP_CONFIG_PLUS_GENERATED_AT = '$generatedAt';"
-$content += "var SRP_CARTELLE = $(ConvertTo-JsLiteral $cartelle);"
-$content += "var SRP_COMPETIZIONI = $(ConvertTo-JsLiteral $competizioni);"
-$content += "var SRP_COMPETIZIONI_ALBO = $(ConvertTo-JsLiteral $competizioniAlbo);"
-$content += "var SRP_PALMARES = $(ConvertTo-JsLiteral $palmares);"
-$content += "var SRP_SQUADRE = $(ConvertTo-JsLiteral $squadre);"
-$content += "var SRP_SQUADRE_BY_ID = $(ConvertTo-JsLiteral $squadreById);"
-$content += ""
+# ------------------------------------------------------------
+# Output
+# ------------------------------------------------------------
 
-Set-Content -LiteralPath $OutputPath -Value $content -Encoding UTF8
-Write-Host "Generato: $OutputPath"
-Write-Host "Cartelle: $($cartelle.Count)"
-Write-Host "Competizioni stagione: $($competizioni.Count) stagioni"
-Write-Host "Competizioni albo: $($competizioniAlbo.Count)"
-Write-Host "Squadre: $($squadreById.Count) identita attuali"
+if ($OutputPath -eq "") {
+  $persjs = Join-Path $SiteRoot "persjs"
+  Ensure-Directory $persjs
+  $OutputPath = Join-Path $persjs "fcmSoglieRecordConfigPlus.js"
+}
+else {
+  $outDir = Split-Path -Path $OutputPath -Parent
+  if ($outDir -ne "") {
+    Ensure-Directory $outDir
+  }
+}
+
+$payload = [ordered]@{
+  versione = $ScriptVersion
+  generatoIl = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+  note = "File generato da GeneraSoglieRecordConfigPlus.ps1. Non modificare a mano."
+  sorgenti = [ordered]@{
+    configRoot = $ConfigRoot
+    siteRoot = $SiteRoot
+    cartelle = $configCartelle
+    competizioni = $configCompetizioni
+    palmares = $configPalmares
+    squadre = $configSquadre
+  }
+  cartelle = $cartelle
+  competizioni = $competizioni
+  competizioniAlbo = $competizioniAlbo
+  palmares = $palmares
+  squadre = $squadre
+  squadreById = $squadreById
+}
+
+$json = $payload | ConvertTo-Json -Depth 100
+$json = Json-Escape-For-Js $json
+
+$out = @()
+$out += "// ============================================================"
+$out += "// ConfrontiStorici Plus - Record Soglie - Config Plus"
+$out += "// Versione generatore: $ScriptVersion"
+$out += "// Generato il: $((Get-Date).ToString("yyyy-MM-dd HH:mm:ss"))"
+$out += "//"
+$out += "// Questo file e' generato dai file di configurazione LCS_conf_*."
+$out += "// Non modificarlo a mano: rigenerarlo quando cambia la config."
+$out += "// ============================================================"
+$out += ""
+$out += "var SRP_CONFIG_PLUS_VERSION = `"$ScriptVersion`";"
+$out += "var SRP_CONFIG_PLUS = $json;"
+$out += ""
+$out += "var SRP_CARTELLE = SRP_CONFIG_PLUS.cartelle || {};"
+$out += "var SRP_COMPETIZIONI = SRP_CONFIG_PLUS.competizioni || {};"
+$out += "var SRP_COMPETIZIONI_ALBO = SRP_CONFIG_PLUS.competizioniAlbo || {};"
+$out += "var SRP_PALMARES = SRP_CONFIG_PLUS.palmares || {};"
+$out += "var SRP_SQUADRE = SRP_CONFIG_PLUS.squadre || {};"
+$out += "var SRP_SQUADRE_BY_ID = SRP_CONFIG_PLUS.squadreById || {};"
+
+Set-Content -Path $OutputPath -Value $out -Encoding UTF8
+
+Write-Host ""
+Write-Host "Config Plus generato correttamente."
+Write-Host "Versione: $ScriptVersion"
+Write-Host "Output: $OutputPath"
+Write-Host ""
+Write-Host ("Cartelle: " + $cartelle.Count)
+Write-Host ("Stagioni competizioni: " + $competizioni.Count)
+Write-Host ("Competizioni albo: " + $competizioniAlbo.Count)
+Write-Host ("Palmares: " + $palmares.Count)
+Write-Host ("Stagioni squadre: " + $squadre.Count)
+Write-Host ("Squadre albo: " + $squadreById.Count)
+Write-Host ""
