@@ -1,0 +1,862 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <title>Statistiche Classiche Plus</title>
+
+<script src="persjs/fcmSoglieRecordFunzioni.js" type="text/javascript"></script>
+<script src="persjs/fcmConfrontiDati.js" type="text/javascript"></script>
+<script src="persjs/fcmSoglieRecordConfigPlus.js" type="text/javascript"></script>
+<script src="persjs/fcmSoglieRecordVisteV2.js" type="text/javascript"></script>
+
+  <link href="fcmmael.css" rel="stylesheet" type="text/css">
+  <base target="_self">
+
+  <style type="text/css">
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; }
+    .scp-box { border: 1px solid #2323B3; background: #CCFFFF; padding: 12px; }
+    .scp-filtri { border: 1px solid #999; background: #FFFFE0; padding: 8px; margin: 10px 0 14px 0; }
+    .scp-note { border: 1px solid #999; background: #F5F5F5; padding: 8px; margin: 10px 0 14px 0; line-height: 1.45em; }
+    table.tb { border-collapse: collapse; width: 100%; margin-bottom: 18px; background: #FFFFFF; }
+    table.tb th { background: #2323B3; color: #FFFFFF; padding: 4px; border: 1px solid #666; text-align: center; }
+    table.tb td { padding: 4px; border: 1px solid #999; vertical-align: top; }
+    .num { text-align: right; white-space: nowrap; }
+    .cen { text-align: center; white-space: nowrap; }
+    .good { font-weight: bold; }
+    .bad { font-weight: bold; }
+    select { font-size: 12px; }
+  </style>
+
+  <script type="text/javascript">
+    var SCP_STATS = null;
+
+    var SCP_RECORDS = [
+      { key: "mediaPuntiMax", label: "Maggiore media punteggio", tipo: "stagionale", dir: "desc", val: function(x) { return x.mediaPunti; }, fmt: "dec" },
+      { key: "mediaPuntiMin", label: "Minore media punteggio", tipo: "stagionale", dir: "asc", val: function(x) { return x.mediaPunti; }, fmt: "dec" },
+      { key: "sommaPuntiMax", label: "Maggiore somma totale a fine stagione", tipo: "stagionale", dir: "desc", val: function(x) { return x.puntiTotali; }, fmt: "dec" },
+      { key: "sommaPuntiMin", label: "Minore somma totale a fine stagione", tipo: "stagionale", dir: "asc", val: function(x) { return x.puntiTotali; }, fmt: "dec" },
+
+      { key: "puntiClassificaMax", label: "Max punti classifica", tipo: "stagionale", dir: "desc", val: function(x) { return x.puntiClassifica; }, fmt: "int" },
+      { key: "puntiClassificaMin", label: "Min punti classifica", tipo: "stagionale", dir: "asc", val: function(x) { return x.puntiClassifica; }, fmt: "int" },
+      { key: "mediaPuntiClassificaStagioneMax", label: "Migliore media punti classifica per stagione", tipo: "stagionale", dir: "desc", val: function(x) { return x.mediaPuntiClassifica; }, fmt: "dec" },
+      { key: "mediaPuntiClassificaStagioneMin", label: "Peggiore media punti classifica per stagione", tipo: "stagionale", dir: "asc", val: function(x) { return x.mediaPuntiClassifica; }, fmt: "dec" },
+
+      { key: "vittorieMax", label: "Maggior numero di vittorie", tipo: "stagionale", dir: "desc", val: function(x) { return x.vittorie; }, fmt: "int" },
+      { key: "vittorieMin", label: "Minor numero di vittorie", tipo: "stagionale", dir: "asc", val: function(x) { return x.vittorie; }, fmt: "int" },
+      { key: "sconfitteMin", label: "Minor numero di sconfitte", tipo: "stagionale", dir: "asc", val: function(x) { return x.sconfitte; }, fmt: "int" },
+      { key: "sconfitteMax", label: "Maggior numero di sconfitte", tipo: "stagionale", dir: "desc", val: function(x) { return x.sconfitte; }, fmt: "int" },
+      { key: "pareggiMax", label: "Maggior numero di pareggi", tipo: "stagionale", dir: "desc", val: function(x) { return x.pareggi; }, fmt: "int" },
+
+      { key: "gfMax", label: "Maggior numero di gol fatti", tipo: "stagionale", dir: "desc", val: function(x) { return x.golFatti; }, fmt: "int" },
+      { key: "gfMin", label: "Minor numero di gol fatti", tipo: "stagionale", dir: "asc", val: function(x) { return x.golFatti; }, fmt: "int" },
+      { key: "gsMin", label: "Minor numero di gol subiti", tipo: "stagionale", dir: "asc", val: function(x) { return x.golSubiti; }, fmt: "int" },
+      { key: "gsMax", label: "Maggior numero di gol subiti", tipo: "stagionale", dir: "desc", val: function(x) { return x.golSubiti; }, fmt: "int" },
+
+      { key: "mediaPunteggioStoricoMax", label: "Migliore media punteggio storico", tipo: "storico", dir: "desc", val: function(x) { return x.mediaPunti; }, fmt: "dec" },
+      { key: "mediaPunteggioStoricoMin", label: "Peggiore media punteggio storico", tipo: "storico", dir: "asc", val: function(x) { return x.mediaPunti; }, fmt: "dec" },
+      { key: "mediaPuntiClassificaStoricoMax", label: "Migliore media punti classifica storico", tipo: "storico", dir: "desc", val: function(x) { return x.mediaPuntiClassifica; }, fmt: "dec" },
+      { key: "mediaPuntiClassificaStoricoMin", label: "Peggiore media punti classifica storico", tipo: "storico", dir: "asc", val: function(x) { return x.mediaPuntiClassifica; }, fmt: "dec" }
+    ];
+
+    function SCPH(s) {
+      s = String(s == null ? "" : s);
+      return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;");
+    }
+
+    function SCPF(n) {
+      if (typeof SRVF == "function") return SRVF(n);
+      var x = parseFloat(n);
+      if (isNaN(x)) x = 0;
+      x = Math.round(x * 100) / 100;
+      if (Math.abs(x - Math.round(x)) < 0.001) return String(Math.round(x));
+      return String(x).replace(".", ",");
+    }
+
+    function SCPNum(n) {
+      var x = parseFloat(n);
+      if (isNaN(x)) return 0;
+      return x;
+    }
+
+    function SCPGetArrayConfronti() {
+      if (typeof arrConfronti != "undefined" && arrConfronti) return arrConfronti;
+      if (typeof a != "undefined" && a) return a;
+
+      if (typeof window != "undefined") {
+        if (window.arrConfronti) return window.arrConfronti;
+        if (window.a) return window.a;
+      }
+
+      return null;
+    }
+
+    function SCPGet(m, nome) {
+      if (!m) return null;
+      if (m[nome] != null) return m[nome];
+      return null;
+    }
+
+    function SCPIsConfrontoValido(m) {
+      if (!m) return false;
+
+      return (
+        SCPGet(m, "Stagione") != null &&
+        SCPGet(m, "Competizione") != null &&
+        SCPGet(m, "SquadraCasa") != null &&
+        SCPGet(m, "SquadraFuori") != null &&
+        SCPGet(m, "PuntiCasa") != null &&
+        SCPGet(m, "PuntiFuori") != null
+      );
+    }
+
+    function SCPEachConfronto(fn) {
+      var arr = SCPGetArrayConfronti();
+      if (!arr) return 0;
+
+      var count = 0;
+
+      for (var i = 0; i < arr.length; i++) {
+        var m = arr[i];
+        if (!SCPIsConfrontoValido(m)) continue;
+
+        fn(m, i);
+        count++;
+      }
+
+      return count;
+    }
+
+    function SCPGolCasa(m, pc) {
+      var gc = parseInt(SCPGet(m, "GolRegoCasa"), 10);
+      if (isNaN(gc)) gc = parseInt(SCPGet(m, "GolCasa"), 10);
+      if (isNaN(gc) && typeof SogRepGolDaPunti == "function") gc = SogRepGolDaPunti(pc);
+      if (isNaN(gc)) gc = 0;
+      return gc;
+    }
+
+    function SCPGolFuori(m, pf) {
+      var gf = parseInt(SCPGet(m, "GolRegoFuori"), 10);
+      if (isNaN(gf)) gf = parseInt(SCPGet(m, "GolFuori"), 10);
+      if (isNaN(gf) && typeof SogRepGolDaPunti == "function") gf = SogRepGolDaPunti(pf);
+      if (isNaN(gf)) gf = 0;
+      return gf;
+    }
+
+    function SCPPuntiClassifica(gf, gs) {
+      if (gf > gs) return 3;
+      if (gf == gs) return 1;
+      return 0;
+    }
+
+    function SCPUltimaStagione() {
+      var max = 0;
+
+      SCPEachConfronto(function(m) {
+        var s = parseInt(SCPGet(m, "Stagione"), 10);
+        if (!isNaN(s) && s > max) max = s;
+      });
+
+      return max;
+    }
+
+    function SCPNomeSquadraDaId(id, fallback) {
+      if (typeof SRVNomeSquadraDaId == "function") return SRVNomeSquadraDaId(id, fallback);
+
+      id = parseInt(id, 10);
+      if (typeof SRP_SQUADRE_BY_ID != "undefined" && SRP_SQUADRE_BY_ID[String(id)]) {
+        var s = SRP_SQUADRE_BY_ID[String(id)];
+        if (s && s.nomeAttuale) return String(s.nomeAttuale);
+      }
+
+      return String(fallback == null ? "" : fallback);
+    }
+
+    function SCPMatchCompetizione(idReale, filtroId) {
+      if (typeof SRVMatchCompetizione == "function") return SRVMatchCompetizione(idReale, filtroId);
+
+      filtroId = parseInt(filtroId, 10);
+      if (filtroId == 0) return true;
+      return parseInt(idReale, 10) == filtroId;
+    }
+
+    function SCPNomeCompetizione(id) {
+      if (typeof SRVNomeCompetizione == "function") return SRVNomeCompetizione(id);
+      if (id == 0) return "Tutte le competizioni";
+      return "Competizione " + id;
+    }
+
+    function SCPGetCompetizioni(stagione) {
+      var map = {};
+      var arr = [];
+
+      SCPEachConfronto(function(m) {
+        var st = parseInt(SCPGet(m, "Stagione"), 10);
+        if (stagione != 0 && st != parseInt(stagione, 10)) return;
+
+        var id = parseInt(SCPGet(m, "Competizione"), 10);
+        if (isNaN(id)) return;
+
+        var idNorm = id;
+        if (typeof SRVCompetizioneNormalizzata == "function") idNorm = SRVCompetizioneNormalizzata(id);
+
+        if (!map[idNorm]) {
+          map[idNorm] = true;
+          arr.push({
+            id: idNorm,
+            nome: SCPNomeCompetizione(idNorm),
+            ordine: idNorm
+          });
+        }
+      });
+
+      arr.sort(function(a, b) {
+        return String(a.nome).localeCompare(String(b.nome));
+      });
+
+      return arr;
+    }
+
+    function SCPGetStagioni() {
+      var map = {};
+      var arr = [];
+
+      SCPEachConfronto(function(m) {
+        var s = parseInt(SCPGet(m, "Stagione"), 10);
+        if (isNaN(s)) return;
+
+        if (!map[s]) {
+          map[s] = true;
+          arr.push(s);
+        }
+      });
+
+      arr.sort(function(a, b) { return b - a; });
+      return arr;
+    }
+
+    function SCPGetSquadreAttualiMap() {
+      var ultima = SCPUltimaStagione();
+      var map = {};
+
+      SCPEachConfronto(function(m) {
+        var st = parseInt(SCPGet(m, "Stagione"), 10);
+        if (st != ultima) return;
+
+        map[SCPNomeSquadraDaId(SCPGet(m, "IDASquadraCasa"), SCPGet(m, "SquadraCasa"))] = true;
+        map[SCPNomeSquadraDaId(SCPGet(m, "IDASquadraFuori"), SCPGet(m, "SquadraFuori"))] = true;
+      });
+
+      return map;
+    }
+
+    function SCPNewStat(nome, stagione) {
+      return {
+        nome: nome,
+        stagione: stagione,
+        giocate: 0,
+        puntiTotali: 0,
+        mediaPunti: 0,
+        puntiClassifica: 0,
+        mediaPuntiClassifica: 0,
+        vittorie: 0,
+        pareggi: 0,
+        sconfitte: 0,
+        golFatti: 0,
+        golSubiti: 0
+      };
+    }
+
+    function SCPKey(nome, stagione, tipo) {
+      if (tipo == "storico") return nome;
+      return stagione + "|" + nome;
+    }
+
+    function SCPEnsure(map, nome, stagione, tipo) {
+      var k = SCPKey(nome, stagione, tipo);
+      if (!map[k]) map[k] = SCPNewStat(nome, tipo == "storico" ? "Storico" : stagione);
+      return map[k];
+    }
+
+    function SCPAddPrestazione(st, punti, puntiClassifica, gf, gs) {
+      st.giocate++;
+      st.puntiTotali += punti;
+      st.puntiClassifica += puntiClassifica;
+      st.golFatti += gf;
+      st.golSubiti += gs;
+
+      if (puntiClassifica == 3) st.vittorie++;
+      else if (puntiClassifica == 1) st.pareggi++;
+      else st.sconfitte++;
+    }
+
+    function SCPFinalize(map) {
+      var arr = [];
+
+      for (var k in map) {
+        if (!map.hasOwnProperty(k)) continue;
+
+        var x = map[k];
+
+        if (x.giocate > 0) {
+          x.mediaPunti = x.puntiTotali / x.giocate;
+          x.mediaPuntiClassifica = x.puntiClassifica / x.giocate;
+        }
+
+        arr.push(x);
+      }
+
+      return arr;
+    }
+
+    function SCPCalcolaStats(modo, stagione, compId) {
+      var mapStagionali = {};
+      var mapStorico = {};
+      var partite = 0;
+      var righeLette = 0;
+
+      righeLette = SCPEachConfronto(function(m) {
+        var st = parseInt(SCPGet(m, "Stagione"), 10);
+
+        if (modo == "stagione" && st != parseInt(stagione, 10)) return;
+        if (!SCPMatchCompetizione(SCPGet(m, "Competizione"), compId)) return;
+
+        partite++;
+
+        var nomeCasa = SCPNomeSquadraDaId(SCPGet(m, "IDASquadraCasa"), SCPGet(m, "SquadraCasa"));
+        var nomeFuori = SCPNomeSquadraDaId(SCPGet(m, "IDASquadraFuori"), SCPGet(m, "SquadraFuori"));
+
+        var pc = SCPNum(SCPGet(m, "PuntiCasa"));
+        var pf = SCPNum(SCPGet(m, "PuntiFuori"));
+
+        var gc = SCPGolCasa(m, pc);
+        var gf = SCPGolFuori(m, pf);
+
+        var puntiClassCasa = SCPPuntiClassifica(gc, gf);
+        var puntiClassFuori = SCPPuntiClassifica(gf, gc);
+
+        var stCasa = SCPEnsure(mapStagionali, nomeCasa, st, "stagionale");
+        var stFuori = SCPEnsure(mapStagionali, nomeFuori, st, "stagionale");
+
+        var stoCasa = SCPEnsure(mapStorico, nomeCasa, "Storico", "storico");
+        var stoFuori = SCPEnsure(mapStorico, nomeFuori, "Storico", "storico");
+
+        SCPAddPrestazione(stCasa, pc, puntiClassCasa, gc, gf);
+        SCPAddPrestazione(stFuori, pf, puntiClassFuori, gf, gc);
+
+        SCPAddPrestazione(stoCasa, pc, puntiClassCasa, gc, gf);
+        SCPAddPrestazione(stoFuori, pf, puntiClassFuori, gf, gc);
+      });
+
+      return {
+        stagionali: SCPFinalize(mapStagionali),
+        storico: SCPFinalize(mapStorico),
+        partite: partite,
+        righeLette: righeLette
+      };
+    }
+
+    function SCPFillStagioni() {
+      var sel = document.getElementById("filtroStagione");
+      var arr = SCPGetStagioni();
+
+      sel.options.length = 0;
+
+      for (var i = 0; i < arr.length; i++) {
+        var opt = document.createElement("option");
+        opt.value = arr[i];
+        opt.text = "Stagione " + arr[i];
+        sel.options.add(opt);
+      }
+
+      if (arr.length > 0) sel.value = SCPUltimaStagione();
+    }
+
+    function SCPFillCompetizioni() {
+      var sel = document.getElementById("filtroCompetizione");
+      var modo = document.getElementById("filtroModo").value;
+      var stagione = parseInt(document.getElementById("filtroStagione").value, 10);
+      var stagioneComp = modo == "stagione" ? stagione : 0;
+      var old = sel.value;
+
+      sel.options.length = 0;
+
+      var optAll = document.createElement("option");
+      optAll.value = "0";
+      optAll.text = "Tutte le competizioni";
+      sel.options.add(optAll);
+
+      var arr = SCPGetCompetizioni(stagioneComp);
+
+      for (var i = 0; i < arr.length; i++) {
+        var opt = document.createElement("option");
+        opt.value = arr[i].id;
+        opt.text = arr[i].nome;
+        sel.options.add(opt);
+      }
+
+      sel.value = old;
+      if (sel.selectedIndex < 0) sel.value = "0";
+    }
+
+    function SCPFillRecords() {
+      var sel = document.getElementById("filtroRecord");
+      sel.options.length = 0;
+
+      var optAll = document.createElement("option");
+      optAll.value = "tutti";
+      optAll.text = "Tutti i record";
+      sel.options.add(optAll);
+
+      for (var i = 0; i < SCP_RECORDS.length; i++) {
+        var r = SCP_RECORDS[i];
+        var opt = document.createElement("option");
+        opt.value = r.key;
+        opt.text = r.label;
+        sel.options.add(opt);
+      }
+    }
+
+    function SCPFillSquadre(stats) {
+      var filtroSquadre = document.getElementById("filtroSquadre").value;
+      var sel = document.getElementById("filtroSquadra");
+      var old = sel.value;
+      var attuali = SCPGetSquadreAttualiMap();
+      var map = {};
+      var arr = [];
+
+      for (var i = 0; i < stats.storico.length; i++) {
+        var nome = stats.storico[i].nome;
+        if (filtroSquadre == "attuali" && !attuali[nome]) continue;
+
+        if (!map[nome]) {
+          map[nome] = true;
+          arr.push(nome);
+        }
+      }
+
+      arr.sort(function(a, b) { return String(a).localeCompare(String(b)); });
+
+      sel.options.length = 0;
+
+      var optAll = document.createElement("option");
+      optAll.value = "";
+      optAll.text = "Tutte";
+      sel.options.add(optAll);
+
+      for (var j = 0; j < arr.length; j++) {
+        var opt = document.createElement("option");
+        opt.value = arr[j];
+        opt.text = arr[j];
+        sel.options.add(opt);
+      }
+
+      sel.value = old;
+      if (sel.selectedIndex < 0) sel.value = "";
+    }
+
+    function SCPRecordByKey(key) {
+      for (var i = 0; i < SCP_RECORDS.length; i++) {
+        if (SCP_RECORDS[i].key == key) return SCP_RECORDS[i];
+      }
+      return null;
+    }
+
+    function SCPFiltraBase(arr, filtroSquadre, squadraFiltro) {
+      var out = [];
+      var attuali = SCPGetSquadreAttualiMap();
+
+      for (var i = 0; i < arr.length; i++) {
+        var x = arr[i];
+
+        if (filtroSquadre == "attuali" && !attuali[x.nome]) continue;
+        if (squadraFiltro != "" && x.nome != squadraFiltro) continue;
+        if (x.giocate <= 0) continue;
+
+        out.push(x);
+      }
+
+      return out;
+    }
+
+    function SCPSortRecord(arr, rec) {
+      arr.sort(function(a, b) {
+        var va = rec.val(a);
+        var vb = rec.val(b);
+
+        if (rec.dir == "asc") {
+          if (va != vb) return va - vb;
+        } else {
+          if (va != vb) return vb - va;
+        }
+
+        if (a.stagione != b.stagione) return String(b.stagione).localeCompare(String(a.stagione));
+        return String(a.nome).localeCompare(String(b.nome));
+      });
+
+      return arr;
+    }
+
+    function SCPTopConPari(arr, topN, rec) {
+      if (topN >= arr.length) return arr;
+      if (topN <= 0) return [];
+
+      var limite = rec.val(arr[topN - 1]);
+      var out = [];
+
+      for (var i = 0; i < arr.length; i++) {
+        if (i < topN || rec.val(arr[i]) == limite) out.push(arr[i]);
+      }
+
+      return out;
+    }
+
+    function SCPFiltroNumero() {
+      var v = document.getElementById("filtroNumero").value;
+      if (v == "tutti") return 999999;
+      return parseInt(v, 10);
+    }
+
+    function SCPFormatValore(rec, x) {
+      var v = rec.val(x);
+      if (rec.fmt == "int") return String(Math.round(v));
+      return SCPF(v);
+    }
+
+    function SCPRenderRecord(rec, arr, topN) {
+      arr = SCPSortRecord(arr, rec);
+      arr = SCPTopConPari(arr, topN, rec);
+
+      var html = "";
+
+      html += "<h3>" + SCPH(rec.label) + "</h3>";
+      html += "<table class='tb'>";
+      html += "<tr>";
+      html += "<th>Pos.</th>";
+      html += "<th>Squadra</th>";
+      html += "<th>Stagione</th>";
+      html += "<th>Giocate</th>";
+      html += "<th>Valore record</th>";
+      html += "<th>Punti totali</th>";
+      html += "<th>Media punti</th>";
+      html += "<th>Punti classifica</th>";
+      html += "<th>Media punti classifica</th>";
+      html += "<th>V</th>";
+      html += "<th>N</th>";
+      html += "<th>P</th>";
+      html += "<th>GF</th>";
+      html += "<th>GS</th>";
+      html += "</tr>";
+
+      for (var i = 0; i < arr.length; i++) {
+        var x = arr[i];
+
+        html += "<tr>";
+        html += "<td class='cen'>" + (i + 1) + "</td>";
+        html += "<td><b>" + SCPH(x.nome) + "</b></td>";
+        html += "<td class='cen'>" + SCPH(x.stagione) + "</td>";
+        html += "<td class='num'>" + x.giocate + "</td>";
+        html += "<td class='num good'>" + SCPFormatValore(rec, x) + "</td>";
+        html += "<td class='num'>" + SCPF(x.puntiTotali) + "</td>";
+        html += "<td class='num'>" + SCPF(x.mediaPunti) + "</td>";
+        html += "<td class='num'>" + x.puntiClassifica + "</td>";
+        html += "<td class='num'>" + SCPF(x.mediaPuntiClassifica) + "</td>";
+        html += "<td class='num'>" + x.vittorie + "</td>";
+        html += "<td class='num'>" + x.pareggi + "</td>";
+        html += "<td class='num'>" + x.sconfitte + "</td>";
+        html += "<td class='num'>" + x.golFatti + "</td>";
+        html += "<td class='num'>" + x.golSubiti + "</td>";
+        html += "</tr>";
+      }
+
+      if (arr.length == 0) html += "<tr><td colspan='14'>Nessun dato.</td></tr>";
+      html += "</table>";
+
+      return html;
+    }
+
+	    function SCPRenderBloccoRecords(titolo, stats, recordKey, filtroSquadre, squadraFiltro, topN) {
+      var arrStagionali = SCPFiltraBase(stats.stagionali, filtroSquadre, squadraFiltro);
+      var arrStorico = SCPFiltraBase(stats.storico, filtroSquadre, squadraFiltro);
+
+      var html = "";
+
+      html += "<h2>" + SCPH(titolo) + "</h2>";
+
+      if (stats.partite == 0) {
+        html += "<div class='scp-note'>Nessuna partita per questo blocco.</div>";
+        return html;
+      }
+
+      html += "<div class='scp-note'>";
+      html += "<b>Partite analizzate:</b> " + stats.partite;
+      html += " - <b>Righe lette:</b> " + stats.righeLette;
+      html += "</div>";
+
+      if (recordKey == "tutti") {
+        for (var i = 0; i < SCP_RECORDS.length; i++) {
+          var rec = SCP_RECORDS[i];
+          var base = rec.tipo == "storico" ? arrStorico.slice(0) : arrStagionali.slice(0);
+          html += SCPRenderRecord(rec, base, topN);
+        }
+      } else {
+        var r = SCPRecordByKey(recordKey);
+        if (r) {
+          var baseOne = r.tipo == "storico" ? arrStorico.slice(0) : arrStagionali.slice(0);
+          html += SCPRenderRecord(r, baseOne, topN);
+        }
+      }
+
+      return html;
+    }
+
+    function SCPGetCompetizioniPerVista(modo, stagione, compId) {
+      var arr = [];
+
+      compId = parseInt(compId, 10);
+
+      if (compId != 0) {
+        arr.push({
+          id: compId,
+          nome: SCPNomeCompetizione(compId),
+          ordine: compId
+        });
+
+        return arr;
+      }
+
+      var stagioneComp = modo == "stagione" ? stagione : 0;
+      arr = SCPGetCompetizioni(stagioneComp);
+
+      arr.sort(function(a, b) {
+        if (a.ordine != b.ordine) return a.ordine - b.ordine;
+        return String(a.nome).localeCompare(String(b.nome));
+      });
+
+      return arr;
+    }
+
+    function SCPRenderPerCompetizione(modo, stagione, compId, recordKey, filtroSquadre, squadraFiltro, topN) {
+      var comps = SCPGetCompetizioniPerVista(modo, stagione, compId);
+      var html = "";
+
+      if (comps.length == 0) {
+        html += "<div class='scp-note'>Nessuna competizione disponibile per i filtri selezionati.</div>";
+        return html;
+      }
+
+      for (var i = 0; i < comps.length; i++) {
+        var c = comps[i];
+        var statsComp = SCPCalcolaStats(modo, stagione, c.id);
+
+        if (!statsComp || statsComp.partite == 0) continue;
+
+        html += SCPRenderBloccoRecords(
+          "Competizione: " + c.nome,
+          statsComp,
+          recordKey,
+          filtroSquadre,
+          squadraFiltro,
+          topN
+        );
+      }
+
+      if (html == "") {
+        html += "<div class='scp-note'>Nessuna partita trovata nelle competizioni disponibili.</div>";
+      }
+
+      return html;
+    }
+
+        function SCPRender() {
+      var modo = document.getElementById("filtroModo").value;
+      var stagione = parseInt(document.getElementById("filtroStagione").value, 10);
+      var compId = parseInt(document.getElementById("filtroCompetizione").value, 10);
+      var filtroSquadre = document.getElementById("filtroSquadre").value;
+      var squadraFiltro = document.getElementById("filtroSquadra").value;
+      var recordKey = document.getElementById("filtroRecord").value;
+      var vistaRecord = document.getElementById("filtroVistaRecord").value;
+      var topN = SCPFiltroNumero();
+
+      SCP_STATS = SCPCalcolaStats(modo, stagione, compId);
+
+      if (!SCP_STATS || SCP_STATS.righeLette == 0) {
+        document.getElementById("infoFiltro").innerHTML =
+          "<b>Errore:</b> nessun dato ConfrontiStorici leggibile.";
+
+        document.getElementById("contenuto").innerHTML =
+          "<div class='scp-note'>Nessuna riga letta. La pagina ha cercato gli array globali <b>arrConfronti</b> e <b>a</b>.</div>";
+
+        return;
+      }
+
+      if (SCP_STATS.partite == 0) {
+        document.getElementById("infoFiltro").innerHTML =
+          "<b>Nessuna partita trovata</b> con i filtri selezionati.";
+
+        document.getElementById("contenuto").innerHTML =
+          "<div class='scp-note'>Righe lette: <b>" + SCP_STATS.righeLette + "</b>, ma nessuna partita corrisponde ai filtri correnti.</div>";
+
+        return;
+      }
+
+      SCPFillSquadre(SCP_STATS);
+      squadraFiltro = document.getElementById("filtroSquadra").value;
+
+      var titoloModo = modo == "stagione" ? ("Stagione " + stagione) : "Storico";
+      var titoloComp = compId == 0 ? "Tutte le competizioni" : SCPNomeCompetizione(compId);
+      var titoloVista = "record assoluti globali";
+
+      if (vistaRecord == "perCompetizione") titoloVista = "record divisi per competizione";
+      if (vistaRecord == "entrambi") titoloVista = "globali + divisi per competizione";
+
+      document.getElementById("infoFiltro").innerHTML =
+        "<b>Modalita':</b> " + SCPH(titoloModo) +
+        " - <b>Competizione:</b> " + SCPH(titoloComp) +
+        " - <b>Vista record:</b> " + SCPH(titoloVista) +
+        " - <b>Partite analizzate:</b> " + SCP_STATS.partite +
+        " - <b>Righe lette:</b> " + SCP_STATS.righeLette +
+        " - <b>Squadre:</b> " + (filtroSquadre == "attuali" ? "solo attuali" : "tutte") +
+        " - <b>Squadra:</b> " + (squadraFiltro == "" ? "tutte" : SCPH(squadraFiltro));
+
+      var html = "";
+
+      html += "<div class='scp-note'>";
+      html += "<b>Nota di lettura</b><br>";
+      html += "I record stagionali sono calcolati su coppie squadra-stagione. ";
+      html += "I record storici sono calcolati sull'intera storia della squadra nel filtro selezionato. ";
+      html += "Punti classifica: vittoria = 3, pareggio = 1, sconfitta = 0. ";
+      html += "Media punteggio = somma punti fantasy / partite giocate. ";
+      html += "Media punti classifica = punti classifica / partite giocate. ";
+      html += "La vista divisa per competizione ricalcola gli stessi record separatamente per ogni competizione, utile per non mischiare tornei con numero di partite diverso.";
+      html += "</div>";
+
+      if (vistaRecord == "globali" || vistaRecord == "entrambi") {
+        html += SCPRenderBloccoRecords(
+          "Record assoluti globali",
+          SCP_STATS,
+          recordKey,
+          filtroSquadre,
+          squadraFiltro,
+          topN
+        );
+      }
+
+      if (vistaRecord == "perCompetizione" || vistaRecord == "entrambi") {
+        html += SCPRenderPerCompetizione(
+          modo,
+          stagione,
+          compId,
+          recordKey,
+          filtroSquadre,
+          squadraFiltro,
+          topN
+        );
+      }
+
+      document.getElementById("contenuto").innerHTML = html;
+    }
+
+    function SCPModoChanged() {
+      var modo = document.getElementById("filtroModo").value;
+      document.getElementById("bloccoStagione").style.display = modo == "stagione" ? "inline" : "none";
+      SCPFillCompetizioni();
+      SCPRender();
+    }
+
+    function SCPInit() {
+      SCPFillStagioni();
+      SCPFillCompetizioni();
+      SCPFillRecords();
+
+      document.getElementById("filtroModo").onchange = SCPModoChanged;
+      document.getElementById("filtroStagione").onchange = function() { SCPFillCompetizioni(); SCPRender(); };
+      document.getElementById("filtroCompetizione").onchange = SCPRender;
+      document.getElementById("filtroSquadre").onchange = SCPRender;
+      document.getElementById("filtroSquadra").onchange = SCPRender;
+		document.getElementById("filtroRecord").onchange = SCPRender;
+	document.getElementById("filtroVistaRecord").onchange = SCPRender;
+	document.getElementById("filtroNumero").onchange = SCPRender;
+
+      SCPModoChanged();
+    }
+  </script>
+</head>
+
+<body onload="SCPInit();">
+  <div class="scp-box">
+    <h2>Statistiche Classiche Plus</h2>
+
+    <p>
+      Nuova pagina Plus per record classici su punteggi, classifica, vittorie, pareggi, sconfitte, gol fatti e gol subiti.
+      Pagine di controllo:
+      <a href="soglieRecordStagioneV2.htm">Record Soglie stagione V2</a> |
+      <a href="soglieRecordStoricoV2.htm">Record Soglie storico V2</a>.
+    </p>
+
+    <div class="scp-filtri">
+      <b>Filtri</b><br><br>
+
+      Modalita':
+      <select id="filtroModo">
+        <option value="stagione" selected>singola stagione</option>
+        <option value="storico">storico</option>
+      </select>
+
+      &nbsp;&nbsp;
+
+      <span id="bloccoStagione">
+        Stagione:
+        <select id="filtroStagione"></select>
+        &nbsp;&nbsp;
+      </span>
+
+      Competizione:
+      <select id="filtroCompetizione"></select>
+
+      &nbsp;&nbsp;
+
+      Squadre:
+      <select id="filtroSquadre">
+        <option value="tutte" selected>tutte le squadre</option>
+        <option value="attuali">solo squadre attuali</option>
+      </select>
+
+      &nbsp;&nbsp;
+
+      Squadra:
+      <select id="filtroSquadra"></select>
+
+      &nbsp;&nbsp;
+
+Record:
+<select id="filtroRecord"></select>
+
+&nbsp;&nbsp;
+
+Vista record:
+<select id="filtroVistaRecord">
+  <option value="globali" selected>record assoluti globali</option>
+  <option value="perCompetizione">record divisi per competizione</option>
+  <option value="entrambi">globali + divisi per competizione</option>
+</select>
+
+&nbsp;&nbsp;
+
+Mostra:
+      <select id="filtroNumero">
+        <option value="1">1</option>
+        <option value="3">3</option>
+        <option value="5" selected>5</option>
+        <option value="10">10</option>
+        <option value="20">20</option>
+        <option value="30">30</option>
+        <option value="tutti">tutti</option>
+      </select>
+    </div>
+
+    <div class="scp-note" id="infoFiltro"></div>
+
+    <div id="contenuto"></div>
+  </div>
+</body>
+</html>
