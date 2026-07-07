@@ -1,6 +1,6 @@
 # Record Soglie per ConfrontiStorici - Walkthrough tecnico completo
 
-Versione documentata: **V2 / v1.1.0**  
+Versione documentata: **V2 / v1.2.0 + Statistiche Classiche Plus**  
 Ambiente previsto: sito locale/generato da Fantacalcio Manager con plugin **ConfrontiStorici 3.x**.
 
 Questo documento descrive in modo completo cosa e' stato implementato, perche' e' stato implementato in questo modo, quali dati usa, come calcola i record e come sono organizzati i file.
@@ -1511,3 +1511,219 @@ soglieRecordStoricoV2.htm
 Serve ConfrontiStorici 3.x per generare i dati.
 
 Le statistiche sono calcolate lato browser usando `arrConfronti`.
+
+
+---
+
+## 18. Aggiornamento 2026-07-07 - Statistiche Classiche Plus
+
+E' stata aggiunta una nuova pagina Plus separata dai Record Soglie:
+
+```text
+statisticheClassichePlus.htm
+```
+
+La pagina serve per consultare record classici su punteggi, classifica, vittorie, pareggi, sconfitte, gol fatti e gol subiti, sempre leggendo i dati gia' generati da ConfrontiStorici.
+
+La logica resta esterna al plugin originale: non vengono modificati `confrontiStorici.jar`, `confrontiStorici34.exe`, gli archivi `.fcm` o il file dati generato da ConfrontiStorici.
+
+### 18.1 File coinvolti
+
+La nuova pagina viene distribuita nella root del sito:
+
+```text
+<ROOT_SITO>\statisticheClassichePlus.htm
+```
+
+Nel repository:
+
+```text
+dist\statisticheClassichePlus.htm
+```
+
+La pagina usa gli stessi file dati e funzioni gia' presenti nel sito Plus:
+
+```html
+<script src="persjs/fcmSoglieRecordFunzioni.js" type="text/javascript"></script>
+<script src="persjs/fcmConfrontiDati.js" type="text/javascript"></script>
+<script src="persjs/fcmSoglieRecordConfigPlus.js" type="text/javascript"></script>
+<script src="persjs/fcmSoglieRecordVisteV2.js" type="text/javascript"></script>
+```
+
+L'ordine e' importante: `fcmSoglieRecordFunzioni.js` deve essere caricato prima di `fcmConfrontiDati.js`, perche' il file dati contiene righe costruite con `new Y(...)`.
+
+### 18.2 Record classici implementati
+
+La pagina `statisticheClassichePlus.htm` implementa record per stagione e storico, tra cui:
+
+```text
+- maggiore media punteggio
+- minore media punteggio
+- maggiore somma totale a fine stagione
+- minore somma totale a fine stagione
+- max punti classifica
+- min punti classifica
+- migliore media punti classifica per stagione
+- peggiore media punti classifica per stagione
+- maggior numero di vittorie
+- minor numero di vittorie
+- minor numero di sconfitte
+- maggior numero di sconfitte
+- maggior numero di pareggi
+- maggior numero di gol fatti
+- minor numero di gol fatti
+- minor numero di gol subiti
+- maggior numero di gol subiti
+- migliore media punteggio storico
+- peggiore media punteggio storico
+- migliore media punti classifica storico
+- peggiore media punti classifica storico
+- migliore media gol fatti storico
+- migliore media gol subiti storico
+```
+
+I record stagionali sono calcolati su coppie squadra-stagione.
+
+I record storici sono calcolati sull'intera storia della squadra nel filtro selezionato.
+
+### 18.3 Soglia minima 100 partite per record storici di media
+
+Per i record storici di media viene applicato un filtro minimo di 100 partite giocate nel filtro selezionato.
+
+Motivo: sotto le 100 partite le medie possono essere poco significative, soprattutto quando si confrontano squadre presenti per poche stagioni o competizioni con calendari molto diversi.
+
+La pagina mostra una nota esplicativa accanto ai record interessati.
+
+La soglia riguarda in particolare i record storici di media, come:
+
+```text
+- media punteggio storico
+- media punti classifica storico
+- media gol fatti storico
+- media gol subiti storico
+```
+
+### 18.4 Gruppi competizione
+
+Per evitare confronti poco utili tra competizioni con numero di partite molto diverso, la pagina include un filtro di raggruppamento competizioni.
+
+Gruppi disponibili:
+
+```text
+principali = campionati + coppe di lega + coppe interlega
+campionati = Serie A, Serie B, Serie C
+coppe di lega = Coppa di Lega Serie A, Coppa di Lega Serie B, Coppa di Lega Serie C
+coppe interlega = Europa Pipps + Coppa tra le Coppe
+tutte = tutte le competizioni disponibili
+personalizzato = scelta manuale con checkbox
+```
+
+Le Supercoppe non sono incluse nel gruppo `principali`, perche' sono competizioni molto brevi: per esempio in una Supercoppa da una partita il massimo dei punti classifica e' sempre 3, quindi il record non e' informativo.
+
+### 18.5 Record globali con contributo competizione
+
+I record assoluti globali mostrano una colonna finale:
+
+```text
+Contributo competizioni
+```
+
+Questa colonna spiega da quali competizioni arrivano i numeri del record globale.
+
+Esempio di lettura:
+
+```text
+Serie A: 120g, valore ..., pt ..., media ..., class ..., V/N/P ..., GF/GS ...
+Serie B: 80g, valore ..., pt ..., media ..., class ..., V/N/P ..., GF/GS ...
+Serie C: 60g, valore ..., pt ..., media ..., class ..., V/N/P ..., GF/GS ...
+```
+
+Questo evita che un totale globale sia poco interpretabile: si vede subito se il dato e' costruito soprattutto sui campionati, sulle coppe di lega o sulle coppe interlega.
+
+### 18.6 Viste disponibili
+
+La pagina offre tre viste:
+
+```text
+record assoluti globali
+record divisi per competizione
+globali + divisi per competizione
+```
+
+La vista `record assoluti globali` calcola il record sul gruppo competizioni selezionato.
+
+La vista `record divisi per competizione` ricalcola gli stessi record separatamente per ogni competizione inclusa.
+
+La vista `globali + divisi per competizione` mostra prima il dato aggregato e poi il dettaglio separato per torneo.
+
+### 18.7 Installazione della nuova pagina
+
+Copiare il file:
+
+```text
+dist\statisticheClassichePlus.htm
+```
+
+nella root del sito:
+
+```text
+<ROOT_SITO>\statisticheClassichePlus.htm
+```
+
+Esempio operativo:
+
+```powershell
+Copy-Item "D:\DEV_APPS\ConfrontiStorici-3.x-Plus\dist\statisticheClassichePlus.htm" "E:\fantacalcio\Lega2025\statisticheClassichePlus.htm" -Force
+```
+
+Apertura test:
+
+```powershell
+Start-Process "E:\fantacalcio\Lega2025\statisticheClassichePlus.htm"
+```
+
+### 18.8 Link/menu del sito
+
+Per rendere raggiungibili le pagine Plus dal sito, aggiungere nel menu o in una pagina indice del sito un blocco simile:
+
+```html
+<div class="srv-note">
+  <b>ConfrontiStorici Plus</b><br>
+  <a href="soglieRecordStagioneV2.htm">Record Soglie - Stagione V2</a><br>
+  <a href="soglieRecordStoricoV2.htm">Record Soglie - Storico V2</a><br>
+  <a href="statisticheClassichePlus.htm">Statistiche Classiche Plus</a>
+</div>
+```
+
+Se si preferisce non toccare il menu principale del sito, si puo' creare una pagina indice Plus separata, per esempio:
+
+```text
+plus.htm
+```
+
+con link alle tre pagine.
+
+### 18.9 Stato tecnico dopo questo aggiornamento
+
+A questo punto il progetto Plus contiene tre pagine operative:
+
+```text
+soglieRecordStagioneV2.htm
+soglieRecordStoricoV2.htm
+statisticheClassichePlus.htm
+```
+
+Le prime due riguardano i Record Soglie, fortuna/sfortuna, fattore campo e record di mezzo punto.
+
+La terza riguarda statistiche classiche e record aggregati, con filtri per competizione, gruppi competizione e contributo per competizione.
+
+### 18.10 Prossimi step del progetto
+
+Dopo il consolidamento di README, handoff e walkthrough, i prossimi passaggi previsti sono:
+
+```text
+1. Culometro
+2. Integrazione dei file Plus dentro lo zip/distribuzione di ConfrontiStorici
+3. Pulizia e chiusura della release
+4. Creazione pacchetto finale scaricabile
+```
