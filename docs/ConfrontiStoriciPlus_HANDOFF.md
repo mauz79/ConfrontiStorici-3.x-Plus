@@ -625,3 +625,180 @@ e:
 ```
 
 Se il file config Plus manca, resta attivo il fallback precedente.
+
+---
+
+## Aggiornamento 2026-07-07 - Statistiche Classiche Plus
+
+E' stata aggiunta la nuova pagina:
+
+```text
+dist\statisticheClassichePlus.htm
+```
+
+Copia operativa sul sito:
+
+```text
+E:\fantacalcio\Lega2025\statisticheClassichePlus.htm
+```
+
+La pagina e' autonoma lato HTML e usa i dati gia' generati da ConfrontiStorici.
+
+### Dipendenze script
+
+Ordine corretto degli script:
+
+```html
+<script src="persjs/fcmSoglieRecordFunzioni.js" type="text/javascript"></script>
+<script src="persjs/fcmConfrontiDati.js" type="text/javascript"></script>
+<script src="persjs/fcmSoglieRecordConfigPlus.js" type="text/javascript"></script>
+<script src="persjs/fcmSoglieRecordVisteV2.js" type="text/javascript"></script>
+```
+
+Nota importante: `fcmConfrontiDati.js` non va caricato prima di `fcmSoglieRecordFunzioni.js`, perche' il file dati contiene righe con `new Y(...)` e il costruttore `Y` viene definito dalle funzioni.
+
+### Funzionalita' attive
+
+La pagina `statisticheClassichePlus.htm` calcola record classici su:
+
+```text
+- punteggio fantasy
+- punti classifica
+- vittorie
+- pareggi
+- sconfitte
+- gol fatti
+- gol subiti
+- medie storiche
+```
+
+Record implementati:
+
+```text
+- maggiore media punteggio
+- minore media punteggio
+- maggiore somma totale a fine stagione
+- minore somma totale a fine stagione
+- max punti classifica
+- min punti classifica
+- migliore media punti classifica per stagione
+- peggiore media punti classifica per stagione
+- maggior numero di vittorie
+- minor numero di vittorie
+- minor numero di sconfitte
+- maggior numero di sconfitte
+- maggior numero di pareggi
+- maggior numero di gol fatti
+- minor numero di gol fatti
+- minor numero di gol subiti
+- maggior numero di gol subiti
+- migliore media punteggio storico
+- peggiore media punteggio storico
+- migliore media punti classifica storico
+- peggiore media punti classifica storico
+- migliore media gol fatti storico
+- migliore media gol subiti storico
+```
+
+### Soglia minima per record storici di media
+
+Per i record storici di media viene applicato un minimo di **100 partite giocate** nel filtro selezionato.
+
+Motivo: sotto le 100 partite la media puo' essere poco significativa, soprattutto quando si mischiano competizioni con calendari molto diversi.
+
+La pagina mostra una nota esplicativa vicino ai record interessati.
+
+### Gruppi competizione
+
+Sono stati aggiunti filtri di raggruppamento per evitare classifiche globali poco leggibili o falsate da competizioni brevi.
+
+Gruppi disponibili:
+
+```text
+principali = campionati + coppe di lega + coppe interlega
+campionati = Serie A, Serie B, Serie C
+coppe di lega = Coppa di Lega Serie A, Coppa di Lega Serie B, Coppa di Lega Serie C
+coppe interlega = Europa Pipps + Coppa tra le Coppe
+tutte = tutte le competizioni disponibili
+personalizzato = scelta manuale con checkbox
+```
+
+Le Supercoppe non sono incluse nel gruppo `principali`, perche' sono competizioni troppo brevi e rendono poco utili alcuni record come il massimo dei punti classifica.
+
+### Record globali e contributo competizioni
+
+I record assoluti globali mostrano una colonna:
+
+```text
+Contributo competizioni
+```
+
+Questa colonna mostra per ogni riga come il totale globale e' distribuito tra le singole competizioni, per esempio Serie A, Serie B, Serie C, coppe di lega e coppe interlega.
+
+Questo e' importante perche' alcune competizioni non esistono in tutte le stagioni o non hanno sempre lo stesso numero di partite.
+
+### Viste record
+
+La pagina offre tre modalita':
+
+```text
+record assoluti globali
+record divisi per competizione
+globali + divisi per competizione
+```
+
+La vista `record divisi per competizione` ricalcola ogni record separatamente per ogni competizione inclusa dal gruppo scelto.
+
+La vista `globali + divisi per competizione` mostra prima il dato aggregato e poi il dettaglio separato per torneo.
+
+### Filtri principali della pagina
+
+```text
+Modalita': singola stagione / storico
+Stagione: visibile in modalita' singola stagione
+Competizione: tutte o singola competizione
+Gruppo competizioni: principali / campionati / coppe di lega / coppe interlega / tutte / personalizzato
+Squadre: tutte o solo attuali
+Squadra: tutte o singola squadra
+Record: tutti o singolo record
+Vista record: globali / per competizione / entrambi
+Mostra: numero risultati o tutti
+```
+
+### File da copiare sul sito
+
+Dopo ogni modifica:
+
+```powershell
+Copy-Item "D:\DEV_APPS\ConfrontiStorici-3.x-Plus\dist\statisticheClassichePlus.htm" "E:\fantacalcio\Lega2025\statisticheClassichePlus.htm" -Force
+```
+
+Apertura test:
+
+```powershell
+Start-Process "E:\fantacalcio\Lega2025\statisticheClassichePlus.htm"
+```
+
+### Stato operativo verificato
+
+La pagina risulta funzionante dopo la correzione dell'ordine di caricamento degli script:
+
+```text
+fcmSoglieRecordFunzioni.js prima di fcmConfrontiDati.js
+```
+
+Prima della correzione, la pagina non vedeva dati ConfrontiStorici perche' il costruttore `Y` non era ancora disponibile quando veniva caricato `fcmConfrontiDati.js`.
+
+### Commit consigliato per documentazione
+
+```powershell
+cd "D:\DEV_APPS\ConfrontiStorici-3.x-Plus"
+
+git status
+git add README.md docs\ConfrontiStoriciPlus_HANDOFF.md dist\statisticheClassichePlus.htm
+
+git commit -m "Documenta statistiche classiche Plus"
+
+git push
+```
+
