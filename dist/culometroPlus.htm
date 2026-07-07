@@ -1,0 +1,151 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <title>Culometro Plus</title>
+
+  <script src="persjs/fcmSoglieRecordFunzioni.js" type="text/javascript"></script>
+  <script src="persjs/fcmConfrontiDati.js" type="text/javascript"></script>
+  <script src="persjs/fcmSoglieRecordConfigPlus.js" type="text/javascript"></script>
+  <script src="persjs/fcmSoglieRecordVisteV2.js" type="text/javascript"></script>
+  <script src="persjs/fcmCulometroPlusConfig.js" type="text/javascript"></script>
+  <script src="persjs/fcmCulometroPlus.js" type="text/javascript"></script>
+
+  <link href="fcmmael.css" rel="stylesheet" type="text/css">
+  <base target="_self">
+
+  <style type="text/css">
+    body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; }
+    .cul-box { border: 1px solid #2323B3; background: #CCFFFF; padding: 12px; }
+    .cul-filtri { border: 1px solid #999; background: #FFFFE0; padding: 8px; margin: 10px 0 14px 0; line-height: 1.8em; }
+    .cul-note { border: 1px solid #999; background: #F5F5F5; padding: 8px; margin: 10px 0 14px 0; line-height: 1.45em; }
+    .cul-checks { border: 1px solid #999; background: #FFFFFF; padding: 8px; margin: 8px 0 14px 0; }
+    .cul-checks label { display: inline-block; min-width: 220px; margin: 3px 8px 3px 0; white-space: nowrap; }
+    .cul-smallbtn { font-size: 11px; margin-right: 5px; }
+    .cul-card { border: 1px solid #999; background: #FFFFFF; padding: 10px; margin: 10px 0 14px 0; }
+    .cul-card h3 { margin: 0 0 8px 0; color: #2323B3; }
+    .cul-muted { color: #666; }
+    .cul-score { font-size: 18px; font-weight: bold; }
+    .cul-good { font-weight: bold; color: #006600; }
+    .cul-bad { font-weight: bold; color: #990000; }
+    .cul-neutral { font-weight: bold; }
+    table.tb { border-collapse: collapse; width: 100%; margin-bottom: 18px; background: #FFFFFF; }
+    table.tb th { background: #2323B3; color: #FFFFFF; padding: 4px; border: 1px solid #666; text-align: center; }
+    table.tb td { padding: 4px; border: 1px solid #999; vertical-align: top; }
+    .num { text-align: right; white-space: nowrap; }
+    .cen { text-align: center; white-space: nowrap; }
+    select { font-size: 12px; }
+  </style>
+</head>
+
+<body onload="CULInit();">
+  <div class="cul-box">
+    <h2>Culometro Plus</h2>
+    <div>
+      Il Culometro Plus prova a misurare quanto una squadra sia stata favorita o penalizzata
+      da episodi rari e decisivi: vittorie chirurgiche, sconfitte beffa, corto muso,
+      pareggi miracolati, soglie prese o mancate per mezzo punto e fattore campo determinante.
+    </div>
+    <br>
+    <div>
+      L'indice finale e espresso su scala <b>0-100</b>. Il valore <b>50,00</b>
+      rappresenta l'equilibrio tra fortuna e sfortuna: valori superiori a 50 indicano
+      prevalenza di episodi favorevoli, valori inferiori a 50 indicano prevalenza di episodi contrari.
+    </div>
+    <br>
+    <div>
+      Il calcolo non somma semplicemente tutti gli episodi sovrapposti. Ogni prestazione squadra
+      viene classificata con un algoritmo a cascata: il motore parte dagli eventi piu rari e pesanti
+      e scende verso quelli piu comuni. In questo modo una partita come <b>66,0 - 65,5</b>
+      non viene contata quattro volte, ma viene riconosciuta come un unico evento principale ad alta intensita.
+    </div>
+    <br>
+    <div>
+      Il punteggio di ogni evento dipende da piu fattori: livello dell'evento, rarita storica,
+      impatto sportivo sul risultato e configurazione specifica dei punteggi. Una vittoria pesa piu
+      di un pareggio; un episodio che cambia punti classifica pesa piu di una semplice soglia precisa
+      non decisiva; un caso storicamente raro pesa piu di un caso frequente.
+    </div>
+    <br>
+    <div>
+      La rarita viene calcolata sullo storico globale delle prestazioni squadra disponibili nei dati
+      di ConfrontiStorici. Il valore della singola squadra viene poi rapportato alle partite giocate,
+      cosi squadre con molte stagioni e squadre con poche presenze restano confrontabili.
+    </div>
+    <br>
+    <div>
+      I pesi principali sono configurabili nel file <b>persjs/fcmCulometroPlusConfig.js</b>:
+      da ora in poi si possono affinare <b>kScala</b>, <b>pesoRaritaMax</b>, <b>pesoConfigBlend</b>,
+      pesi Tier, impatto sportivo e fasce descrittive senza modificare il motore principale.
+    </div>
+  </div>
+
+  <div class="cul-note">
+    <b>Legenda scala Culometro</b><br>
+    <b>90,00 - 100,00</b>: Co' 'sso culo puoi andare a cazzi &nbsp;|&nbsp;
+    <b>85,00 - 89,99</b>: Protetto dagli dei &nbsp;|&nbsp;
+    <b>73,00 - 84,99</b>: Culone conclamato &nbsp;|&nbsp;
+    <b>66,00 - 72,99</b>: Fortunello &nbsp;|&nbsp;
+    <b>53,01 - 65,99</b>: Non ti lamentare &nbsp;|&nbsp;
+    <b>48,00 - 53,00</b>: Ne carne ne pesce &nbsp;|&nbsp;
+    <b>35,00 - 47,99</b>: Doveva andare meglio &nbsp;|&nbsp;
+    <b>28,00 - 34,99</b>: Sfigatello &nbsp;|&nbsp;
+    <b>16,00 - 27,99</b>: Sfiga cieca &nbsp;|&nbsp;
+    <b>11,00 - 15,99</b>: Raccoglitore di cetrioli &nbsp;|&nbsp;
+    <b>0,00 - 10,99</b>: Vai a farti una vasca a Lourdes
+  </div>
+
+  <div class="cul-filtri">
+    <b>Modalita:</b>
+    <select id="culModo" onchange="CULModoChanged();">
+      <option value="stagione">Stagione</option>
+      <option value="storico">Storico</option>
+    </select>
+
+    <span id="culBoxStagione">
+      &nbsp; <b>Stagione:</b>
+      <select id="culStagione" onchange="CULStagioneChanged();"></select>
+    </span>
+
+    &nbsp; <b>Gruppo competizioni:</b>
+    <select id="culGruppoCompetizioni" onchange="CULGruppoChanged();">
+      <option value="principali">Principali</option>
+      <option value="campionati">Campionati</option>
+      <option value="coppeLega">Coppe di lega</option>
+      <option value="coppeInterlega">Coppe interlega</option>
+      <option value="tutte">Tutte</option>
+      <option value="personalizzato">Personalizzato</option>
+    </select>
+
+    &nbsp; <b>Vista:</b>
+    <select id="culVista" onchange="CULRender();">
+      <option value="globale">Globale</option>
+      <option value="competizione">Per competizione</option>
+      <option value="entrambe">Globale + per competizione</option>
+    </select>
+
+    &nbsp; <b>Squadre:</b>
+    <select id="culFiltroSquadre" onchange="CULRender();">
+      <option value="auto">Automatico</option>
+      <option value="attuali">Solo squadre attuali</option>
+      <option value="tutte">Tutte</option>
+    </select>
+
+    &nbsp; <b>Top:</b>
+    <select id="culTop" onchange="CULRender();">
+      <option value="10">10</option>
+      <option value="20" selected>20</option>
+      <option value="30">30</option>
+      <option value="0">Tutte</option>
+    </select>
+
+    &nbsp;
+    <input type="button" value="Aggiorna" onclick="CULRender();">
+
+    <div id="culBoxChecks" class="cul-checks" style="display:none;"></div>
+  </div>
+
+  <div class="cul-note" id="culInfo"></div>
+  <div id="culOutput"></div>
+</body>
+</html>
