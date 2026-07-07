@@ -1,4 +1,4 @@
-# ConfrontiStorici 3.x Plus - Handoff progetto
+﻿# ConfrontiStorici 3.x Plus - Handoff progetto
 
 Data avvio documento: 2026-07-06  
 Progetto: **ConfrontiStorici 3.x Plus / Record Soglie / Config Plus**  
@@ -801,4 +801,121 @@ git commit -m "Documenta statistiche classiche Plus"
 
 git push
 ```
+
+<!-- CULOMETRO_PLUS_HANDOFF_START -->
+## Culometro Plus - stato consolidato
+
+Modulo aggiunto:
+
+```text
+dist\culometroPlus.htm
+dist\persjs\fcmCulometroPlus.js
+dist\persjs\fcmCulometroPlusConfig.js
+```
+
+Copia sito locale attesa:
+
+```text
+E:\fantacalcio\Lega2025\culometroPlus.htm
+E:\fantacalcio\Lega2025\persjs\fcmCulometroPlus.js
+E:\fantacalcio\Lega2025\persjs\fcmCulometroPlusConfig.js
+```
+
+Il Culometro Plus e' una vista separata HTML + JS. Non modifica il plugin originale ConfrontiStorici, non modifica JAR/EXE e legge i dati gia' presenti in `persjs\fcmConfrontiDati.js`.
+
+### Ordine script
+
+La pagina deve caricare gli script in questo ordine:
+
+```html
+<script src="persjs/fcmSoglieRecordFunzioni.js" type="text/javascript"></script>
+<script src="persjs/fcmConfrontiDati.js" type="text/javascript"></script>
+<script src="persjs/fcmSoglieRecordConfigPlus.js" type="text/javascript"></script>
+<script src="persjs/fcmSoglieRecordVisteV2.js" type="text/javascript"></script>
+<script src="persjs/fcmCulometroPlusConfig.js" type="text/javascript"></script>
+<script src="persjs/fcmCulometroPlus.js" type="text/javascript"></script>
+```
+
+L'ordine e' importante: `fcmConfrontiDati.js` usa costruttori definiti nel file funzioni; il Culometro usa funzioni e dati gia' disponibili nel progetto Plus.
+
+### Scelte di calcolo
+
+Decisioni consolidate:
+
+```text
+- unita' di calcolo = prestazione squadra
+- una partita = due prestazioni squadra
+- ogni prestazione riceve al massimo una etichetta principale
+- algoritmo a cascata da Tier S a Tier D
+- niente somma cieca di eventi sovrapposti
+- rarita' calcolata sullo storico globale delle prestazioni squadra
+- normalizzazione per partite giocate
+- scala 0-100 con 50,00 neutro
+- in modalita' stagione l'indice principale usa la stagione selezionata
+- lo storico sulle stesse competizioni e' confronto separato, non piu' miscela 60/40
+```
+
+La centratura usa il saldo medio storico globale, per evitare distribuzioni sbilanciate tutte verso fortuna o tutte verso sfortuna.
+
+### Configurazione pesi
+
+I pesi si modificano nel file:
+
+```text
+dist\persjs\fcmCulometroPlusConfig.js
+```
+
+Parametri principali:
+
+```text
+kScala
+pesoRaritaMax
+pesoConfigBlend
+rarita
+pesoTier
+pesoImpatto
+fasce
+```
+
+Non modificare il motore `fcmCulometroPlus.js` per semplice tuning dei pesi. Prima provare a calibrare il file config.
+
+### Note operative
+
+Per provare una modifica al config:
+
+```powershell
+cd "D:\DEV_APPS\ConfrontiStorici-3.x-Plus"
+
+Copy-Item ".\dist\persjs\fcmCulometroPlusConfig.js" "E:\fantacalcio\Lega2025\persjs\fcmCulometroPlusConfig.js" -Force
+
+Start-Process "E:\fantacalcio\Lega2025\culometroPlus.htm"
+```
+
+Poi fare refresh forzato nel browser con `CTRL + F5`.
+
+Per copiare tutto il modulo nel sito:
+
+```powershell
+cd "D:\DEV_APPS\ConfrontiStorici-3.x-Plus"
+
+Copy-Item ".\dist\culometroPlus.htm" "E:\fantacalcio\Lega2025\culometroPlus.htm" -Force
+Copy-Item ".\dist\persjs\fcmCulometroPlus.js" "E:\fantacalcio\Lega2025\persjs\fcmCulometroPlus.js" -Force
+Copy-Item ".\dist\persjs\fcmCulometroPlusConfig.js" "E:\fantacalcio\Lega2025\persjs\fcmCulometroPlusConfig.js" -Force
+```
+
+### Nota importante su stagioni e fasce
+
+Il Culometro non deve inventare fasce gol o mapping stagioni.
+
+Le fasce gol devono venire dalle funzioni reali di `fcmSoglieRecordFunzioni.js`, in particolare:
+
+```text
+SogRepGolDaPunti
+SogRepASogliaPrecisa
+SogRepMancaSogliaPerMezzo
+```
+
+Le stagioni non vanno lette come anni. Nei dati ConfrontiStorici `Stagione` e' il numero stagione; per mostrare l'annata corretta usare le funzioni/config gia' presenti e le cartelle tipo `lega2024`, cosi' stagione 20 diventa `2024/2025 (stagione 20)`.
+<!-- CULOMETRO_PLUS_HANDOFF_END -->
+
 

@@ -1,4 +1,4 @@
-# ConfrontiStorici 3.x Plus - Record Soglie
+﻿# ConfrontiStorici 3.x Plus - Record Soglie
 
 Modulo aggiuntivo non ufficiale per **ConfrontiStorici 3.x**, plugin per Fantacalcio Manager.
 
@@ -553,4 +553,70 @@ Start-Process "E:\fantacalcio\Lega2025\statisticheClassichePlus.htm"
 ### Nota di continuita'
 
 La documentazione precedente sulla versione v1.1.0 dei Record Soglie resta valida per il modulo Record Soglie. Questa sezione integra la documentazione con la nuova pagina `statisticheClassichePlus.htm` e con le funzionalita' sviluppate successivamente.
+
+<!-- CULOMETRO_PLUS_START -->
+## Culometro Plus
+
+Il progetto include anche il modulo **Culometro Plus**:
+
+```text
+culometroPlus.htm
+persjs\fcmCulometroPlus.js
+persjs\fcmCulometroPlusConfig.js
+```
+
+Il Culometro Plus misura quanto una squadra sia stata favorita o penalizzata da episodi rari e decisivi: vittorie chirurgiche, sconfitte beffa, corto muso, pareggi miracolati, soglie prese o mancate per mezzo punto e fattore campo determinante.
+
+L'indice finale e' espresso su scala **0-100**:
+
+```text
+50,00 = equilibrio tra fortuna e sfortuna
+> 50  = prevalenza di episodi favorevoli
+< 50  = prevalenza di episodi contrari
+```
+
+Il calcolo lavora per **prestazione squadra**, non per singola riga record. Ogni partita produce due prestazioni, una per la squadra di casa e una per la squadra fuori. Ogni prestazione viene classificata con un algoritmo a cascata: il motore parte dagli eventi piu' rari e pesanti e scende verso quelli piu' comuni. In questo modo una partita come `66,0 - 65,5` non viene contata quattro volte, ma viene riconosciuta come un unico evento principale ad alta intensita'.
+
+Il punteggio di ogni evento dipende da:
+
+```text
+- livello dell'evento, da Tier S a Tier D
+- rarita' storica dell'evento
+- configurazione specifica dei punteggi
+- impatto sportivo sul risultato
+- normalizzazione per partite giocate
+```
+
+La rarita' viene calcolata sullo storico globale delle prestazioni squadra disponibili in `fcmConfrontiDati.js`. Il valore finale della singola squadra viene poi rapportato alle partite giocate, per rendere confrontabili squadre con molte stagioni e squadre con poche presenze.
+
+I pesi principali non sono nel motore, ma nel file separato:
+
+```text
+persjs\fcmCulometroPlusConfig.js
+```
+
+Da questo file si possono calibrare:
+
+```text
+kScala
+pesoRaritaMax
+pesoConfigBlend
+rarita
+pesoTier
+pesoImpatto
+fasce
+```
+
+Regola pratica:
+
+```text
+kScala piu' basso = valori piu' estremi
+kScala piu' alto = valori piu' compressi verso 50
+pesoRaritaMax piu' alto = eventi rarissimi piu' pesanti
+pesoConfigBlend piu' alto = configurazioni specifiche tipo 66,0-65,5 piu' pesanti
+```
+
+Le etichette della scala sono configurabili nel file config. La versione attuale usa fasce goliardiche coerenti con la pagina `culometroPlus.htm`.
+<!-- CULOMETRO_PLUS_END -->
+
 

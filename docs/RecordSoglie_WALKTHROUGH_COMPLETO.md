@@ -1,4 +1,4 @@
-# Record Soglie per ConfrontiStorici - Walkthrough tecnico completo
+﻿# Record Soglie per ConfrontiStorici - Walkthrough tecnico completo
 
 Versione documentata: **V2 / v1.2.0 + Statistiche Classiche Plus**  
 Ambiente previsto: sito locale/generato da Fantacalcio Manager con plugin **ConfrontiStorici 3.x**.
@@ -943,7 +943,7 @@ Una prestazione e' a soglia precisa quando il punteggio e' esattamente una sogli
 66, 72, 77, 81, 85, 89, ...
 ```
 
-Questa metrica serve per i “Tiratori scelti”, cioe' squadre che massimizzano il rendimento senza sprecare punti nella fascia gol.
+Questa metrica serve per i â€œTiratori sceltiâ€, cioe' squadre che massimizzano il rendimento senza sprecare punti nella fascia gol.
 
 ### 7.6 Spreco punti
 
@@ -1727,3 +1727,171 @@ Dopo il consolidamento di README, handoff e walkthrough, i prossimi passaggi pre
 3. Pulizia e chiusura della release
 4. Creazione pacchetto finale scaricabile
 ```
+
+<!-- CULOMETRO_PLUS_WALKTHROUGH_START -->
+## Culometro Plus - walkthrough operativo
+
+### File del modulo
+
+Il Culometro Plus e' composto da tre file principali:
+
+```text
+dist\culometroPlus.htm
+dist\persjs\fcmCulometroPlus.js
+dist\persjs\fcmCulometroPlusConfig.js
+```
+
+Nel sito locale devono essere copiati come:
+
+```text
+E:\fantacalcio\Lega2025\culometroPlus.htm
+E:\fantacalcio\Lega2025\persjs\fcmCulometroPlus.js
+E:\fantacalcio\Lega2025\persjs\fcmCulometroPlusConfig.js
+```
+
+### Che cosa misura
+
+Il Culometro misura la prevalenza di episodi favorevoli o contrari rispetto alla frequenza storica globale.
+
+La scala finale e':
+
+```text
+0,00   = sfortuna estrema
+50,00  = equilibrio fortuna/sfortuna
+100,00 = fortuna estrema
+```
+
+Il valore viene normalizzato sulle partite giocate dalla squadra, per evitare che squadre con molte stagioni abbiano numeri non confrontabili con squadre che hanno poche presenze.
+
+### Algoritmo a cascata
+
+Il motore legge ogni partita e crea due prestazioni:
+
+```text
+prestazione squadra casa
+prestazione squadra fuori
+```
+
+Ogni prestazione viene classificata con una cascata di regole, dal caso piu' raro al piu' comune:
+
+```text
+Tier S = triple / leggende
+Tier A = doppie / miracoli composti
+Tier B = pesi massimi singoli
+Tier C = eventi intermedi
+Tier D = briciole / casi base
+```
+
+Appena una regola risulta vera, viene assegnata una sola etichetta principale e la prestazione viene chiusa. Questo evita che un caso tipo `66,0 - 65,5` venga contato contemporaneamente come soglia precisa, corto muso, vittoria chirurgica, giusto giusto e fattore campo.
+
+### Componenti del punteggio
+
+Il punteggio evento dipende da:
+
+```text
+pesoTier
+pesoRaritaStorica
+pesoConfigSpecifica
+pesoImpattoSportivo
+```
+
+La rarita' storica viene calcolata sul totale storico delle prestazioni squadra, non solo sulla stagione selezionata.
+
+L'impatto sportivo distingue casi diversi:
+
+```text
+sconfitta -> vittoria
+pareggio -> vittoria
+sconfitta -> pareggio
+vittoria -> pareggio
+pareggio -> sconfitta
+vittoria -> sconfitta
+```
+
+Una vittoria pesa piu' di un pareggio; un pareggio salvato dal fattore campo pesa diversamente da un pareggio fuori casa contro avversario superiore; un episodio che cambia punti classifica pesa piu' di una soglia precisa non decisiva.
+
+### Configurazione pesi
+
+Da questa versione i pesi principali sono nel file:
+
+```text
+dist\persjs\fcmCulometroPlusConfig.js
+```
+
+Il motore `fcmCulometroPlus.js` legge il config se caricato prima nella pagina HTML.
+
+Parametri principali:
+
+```text
+kScala
+pesoRaritaMax
+pesoConfigBlend
+rarita
+pesoTier
+pesoImpatto
+fasce
+```
+
+Regole di tuning:
+
+```text
+kScala piu' basso = piu' estremi
+kScala piu' alto = classifica piu' compressa verso 50
+pesoRaritaMax piu' alto = eventi rarissimi piu' forti
+pesoConfigBlend piu' alto = configurazioni specifiche piu' pesanti
+```
+
+Per modificare solo i pesi non serve rigenerare altri file: salvare il config e copiarlo nel sito.
+
+```powershell
+cd "D:\DEV_APPS\ConfrontiStorici-3.x-Plus"
+
+Copy-Item ".\dist\persjs\fcmCulometroPlusConfig.js" "E:\fantacalcio\Lega2025\persjs\fcmCulometroPlusConfig.js" -Force
+
+Start-Process "E:\fantacalcio\Lega2025\culometroPlus.htm"
+```
+
+Poi nel browser usare `CTRL + F5`.
+
+### Installazione completa nel sito
+
+```powershell
+cd "D:\DEV_APPS\ConfrontiStorici-3.x-Plus"
+
+Copy-Item ".\dist\culometroPlus.htm" "E:\fantacalcio\Lega2025\culometroPlus.htm" -Force
+Copy-Item ".\dist\persjs\fcmCulometroPlus.js" "E:\fantacalcio\Lega2025\persjs\fcmCulometroPlus.js" -Force
+Copy-Item ".\dist\persjs\fcmCulometroPlusConfig.js" "E:\fantacalcio\Lega2025\persjs\fcmCulometroPlusConfig.js" -Force
+
+Start-Process "E:\fantacalcio\Lega2025\culometroPlus.htm"
+```
+
+### Controlli dopo modifica
+
+Dopo ogni modifica verificare:
+
+```text
+- la pagina si apre senza errori JS
+- la stagione mostra l'annata corretta, es. 2024/2025 (stagione 20)
+- le competizioni sono selezionabili singolarmente
+- il dettaglio squadra resta chiuso finche' non si clicca "apri"
+- cliccando "apri" si apre la squadra corretta
+- la distribuzione non e' tutta schiacciata sugli estremi
+- la distribuzione non e' tutta compressa tra 40 e 70
+```
+
+### Note da non dimenticare
+
+Non usare `cd /d` in PowerShell. Usare:
+
+```powershell
+cd "D:\DEV_APPS\ConfrontiStorici-3.x-Plus"
+```
+
+oppure:
+
+```powershell
+Set-Location "D:\DEV_APPS\ConfrontiStorici-3.x-Plus"
+```
+<!-- CULOMETRO_PLUS_WALKTHROUGH_END -->
+
+
