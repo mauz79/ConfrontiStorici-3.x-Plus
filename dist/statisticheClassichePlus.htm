@@ -30,6 +30,15 @@
     .good { font-weight: bold; }
     .bad { font-weight: bold; }
     select { font-size: 12px; }
+    .scp-section-title { margin: 18px 0 8px 0; padding: 7px 9px; background: #2323B3; color: #FFFFFF; font-size: 14px; font-weight: bold; }
+    .scp-record-card { border: 1px solid #999; background: #FFFFFF; margin: 10px 0 14px 0; padding: 0; }
+    .scp-record-head { background: #E6E6FA; border-bottom: 1px solid #999; padding: 8px; }
+    .scp-record-head h3 { margin: 0 0 4px 0; font-size: 13px; }
+    .scp-record-meta { font-size: 11px; color: #444; line-height: 1.35em; }
+    .scp-record-body { padding: 8px; }
+    .scp-detail-row { display: none; background: #F9F9F9; }
+    .scp-detail-box { font-size: 11px; line-height: 1.35em; padding: 6px; }
+    .scp-record-empty { padding: 8px; font-style: italic; }
   </style>
 
   <script type="text/javascript">
@@ -659,7 +668,64 @@
       return html;
     }
 
-     function SCPRenderRecord(rec, arr, topN) {
+    function SCPRecordFamiglia(rec) {
+      if (!rec) return "Altri record";
+      var k = String(rec.key || "");
+
+      if (k.indexOf("mediaPunti") >= 0 || k.indexOf("mediaPunteggio") >= 0 || k.indexOf("sommaPunti") >= 0) return "Punteggi fantasy";
+      if (k.indexOf("puntiClassifica") >= 0) return "Punti classifica";
+      if (k.indexOf("vittorie") >= 0 || k.indexOf("sconfitte") >= 0 || k.indexOf("pareggi") >= 0) return "Risultati";
+      if (k.indexOf("gf") >= 0 || k.indexOf("gs") >= 0 || k.indexOf("Gol") >= 0 || k.indexOf("gol") >= 0) return "Gol fatti e subiti";
+
+      return "Altri record";
+    }
+
+    function SCPRecordDescrizione(rec) {
+      if (!rec) return "";
+      var famiglia = SCPRecordFamiglia(rec);
+      var tipo = rec.tipo == "storico" ? "record storico" : "record stagionale";
+      var ordine = rec.dir == "asc" ? "valori piu' bassi" : "valori piu' alti";
+      return famiglia + " - " + tipo + ", ordinato per " + ordine + ".";
+    }
+
+    function SCPRecordContesto(rec, x) {
+      var k = String(rec.key || "");
+      var parts = [];
+
+      if (k.indexOf("mediaPunti") >= 0 || k.indexOf("mediaPunteggio") >= 0 || k.indexOf("sommaPunti") >= 0) {
+        parts.push("Pt tot " + SCPF(x.puntiTotali));
+        parts.push("Media " + SCPF(x.mediaPunti));
+        parts.push("Class " + x.puntiClassifica);
+      } else if (k.indexOf("puntiClassifica") >= 0) {
+        parts.push("Class " + x.puntiClassifica);
+        parts.push("Media class " + SCPF(x.mediaPuntiClassifica));
+        parts.push("V/N/P " + x.vittorie + "/" + x.pareggi + "/" + x.sconfitte);
+      } else if (k.indexOf("vittorie") >= 0 || k.indexOf("sconfitte") >= 0 || k.indexOf("pareggi") >= 0) {
+        parts.push("V/N/P " + x.vittorie + "/" + x.pareggi + "/" + x.sconfitte);
+        parts.push("Class " + x.puntiClassifica);
+        parts.push("GF/GS " + x.golFatti + "/" + x.golSubiti);
+      } else if (k.indexOf("gf") >= 0 || k.indexOf("gs") >= 0 || k.indexOf("Gol") >= 0 || k.indexOf("gol") >= 0) {
+        parts.push("GF/GS " + x.golFatti + "/" + x.golSubiti);
+        parts.push("Media GF/GS " + SCPF(x.mediaGolFatti) + "/" + SCPF(x.mediaGolSubiti));
+        parts.push("Class " + x.puntiClassifica);
+      } else {
+        parts.push("Pt tot " + SCPF(x.puntiTotali));
+        parts.push("Class " + x.puntiClassifica);
+        parts.push("V/N/P " + x.vittorie + "/" + x.pareggi + "/" + x.sconfitte);
+        parts.push("GF/GS " + x.golFatti + "/" + x.golSubiti);
+      }
+
+      return parts.join(" - ");
+    }
+
+    function SCPToggleDettaglio(id) {
+      var el = document.getElementById(id);
+      if (!el) return false;
+      el.style.display = el.style.display == "table-row" ? "none" : "table-row";
+      return false;
+    }
+
+    function SCPRenderRecord(rec, arr, topN) {
       if (rec.minGiocate && rec.minGiocate > 0) {
         var filtrataMin = [];
 
@@ -674,39 +740,34 @@
       arr = SCPTopConPari(arr, topN, rec);
 
       var html = "";
+      var cardIdBase = "scp_det_" + String(rec.key).replace(/[^0-9A-Za-z_]/g, "_") + "_" + Math.floor(Math.random() * 1000000);
 
+      html += "<div class='scp-record-card'>";
+      html += "<div class='scp-record-head'>";
       html += "<h3>" + SCPH(rec.label) + "</h3>";
+      html += "<div class='scp-record-meta'>" + SCPH(SCPRecordDescrizione(rec)) + "</div>";
 
       if (rec.minGiocate && rec.minGiocate > 0) {
-        html += "<div class='scp-note'>";
-        html += "Per questo record storico vengono considerate solo le squadre con almeno <b>" + rec.minGiocate + "</b> partite giocate nel filtro selezionato. ";
-        html += "Sotto questa soglia la media sarebbe poco significativa.";
-        html += "</div>";
+        html += "<div class='scp-record-meta'>Soglia minima: <b>" + rec.minGiocate + "</b> partite giocate nel filtro selezionato.</div>";
       }
 
+      html += "</div>";
+      html += "<div class='scp-record-body'>";
       html += "<table class='tb'>";
       html += "<tr>";
       html += "<th>Pos.</th>";
       html += "<th>Squadra</th>";
       html += "<th>Stagione</th>";
       html += "<th>Giocate</th>";
-      html += "<th>Valore record</th>";
-      html += "<th>Punti totali</th>";
-      html += "<th>Media punti</th>";
-      html += "<th>Punti classifica</th>";
-      html += "<th>Media punti classifica</th>";
-      html += "<th>V</th>";
-      html += "<th>N</th>";
-      html += "<th>P</th>";
-      html += "<th>GF</th>";
-      html += "<th>GS</th>";
-      html += "<th>Media GF</th>";
-      html += "<th>Media GS</th>";
-      html += "<th>Contributo competizioni</th>";
+      html += "<th>Valore</th>";
+      html += "<th>Contesto</th>";
+      html += "<th>Dettaglio</th>";
       html += "</tr>";
 
       for (var i = 0; i < arr.length; i++) {
         var x = arr[i];
+        var detailId = cardIdBase + "_" + i;
+        var contrib = SCPRenderContributoCompetizioni(x, rec);
 
         html += "<tr>";
         html += "<td class='cen'>" + (i + 1) + "</td>";
@@ -714,23 +775,32 @@
         html += "<td class='cen'>" + SCPH(x.stagione) + "</td>";
         html += "<td class='num'>" + x.giocate + "</td>";
         html += "<td class='num good'>" + SCPFormatValore(rec, x) + "</td>";
-        html += "<td class='num'>" + SCPF(x.puntiTotali) + "</td>";
-        html += "<td class='num'>" + SCPF(x.mediaPunti) + "</td>";
-        html += "<td class='num'>" + x.puntiClassifica + "</td>";
-        html += "<td class='num'>" + SCPF(x.mediaPuntiClassifica) + "</td>";
-        html += "<td class='num'>" + x.vittorie + "</td>";
-        html += "<td class='num'>" + x.pareggi + "</td>";
-        html += "<td class='num'>" + x.sconfitte + "</td>";
-        html += "<td class='num'>" + x.golFatti + "</td>";
-        html += "<td class='num'>" + x.golSubiti + "</td>";
-        html += "<td class='num'>" + SCPF(x.mediaGolFatti) + "</td>";
-        html += "<td class='num'>" + SCPF(x.mediaGolSubiti) + "</td>";
-        html += "<td>" + SCPRenderContributoCompetizioni(x, rec) + "</td>";
+        html += "<td>" + SCPH(SCPRecordContesto(rec, x)) + "</td>";
+        html += "<td class='cen'><a href='#' onclick=\"return SCPToggleDettaglio('" + detailId + "');\">apri</a></td>";
+        html += "</tr>";
+
+        html += "<tr id='" + detailId + "' class='scp-detail-row'>";
+        html += "<td colspan='7'>";
+        html += "<div class='scp-detail-box'>";
+        html += "<b>Dettaglio completo</b><br>";
+        html += "Punti totali: <b>" + SCPF(x.puntiTotali) + "</b> - ";
+        html += "Media punti: <b>" + SCPF(x.mediaPunti) + "</b> - ";
+        html += "Punti classifica: <b>" + x.puntiClassifica + "</b> - ";
+        html += "Media punti classifica: <b>" + SCPF(x.mediaPuntiClassifica) + "</b><br>";
+        html += "V/N/P: <b>" + x.vittorie + "/" + x.pareggi + "/" + x.sconfitte + "</b> - ";
+        html += "GF/GS: <b>" + x.golFatti + "/" + x.golSubiti + "</b> - ";
+        html += "Media GF/GS: <b>" + SCPF(x.mediaGolFatti) + "/" + SCPF(x.mediaGolSubiti) + "</b>";
+        html += "<br><br><b>Contributo competizioni</b>";
+        html += contrib;
+        html += "</div>";
+        html += "</td>";
         html += "</tr>";
       }
 
-      if (arr.length == 0) html += "<tr><td colspan='17'>Nessun dato.</td></tr>";
+      if (arr.length == 0) html += "<tr><td colspan='7'>Nessun dato.</td></tr>";
       html += "</table>";
+      html += "</div>";
+      html += "</div>";
 
       return html;
     }
@@ -858,19 +928,39 @@
       html += "<div class='scp-note'>";
       html += "<b>Partite analizzate:</b> " + stats.partite;
       html += " - <b>Righe lette:</b> " + stats.righeLette;
+      html += "<br>Visualizzazione a schede: ogni record ha una tabella breve; i dettagli completi e il contributo competizioni sono chiusi e si aprono con il link <b>apri</b>.";
       html += "</div>";
 
       if (recordKey == "tutti") {
+        var famiglie = [];
+        var mapFamiglie = {};
+
         for (var i = 0; i < SCP_RECORDS.length; i++) {
           var rec = SCP_RECORDS[i];
-          var base = rec.tipo == "storico" ? arrStorico.slice(0) : arrStagionali.slice(0);
-          html += SCPRenderRecord(rec, base, topN);
+          var fam = SCPRecordFamiglia(rec);
+          if (!mapFamiglie[fam]) {
+            mapFamiglie[fam] = [];
+            famiglie.push(fam);
+          }
+          mapFamiglie[fam].push(rec);
+        }
+
+        for (var f = 0; f < famiglie.length; f++) {
+          var nomeFam = famiglie[f];
+          html += "<div class='scp-section-title'>" + SCPH(nomeFam) + "</div>";
+
+          for (var rix = 0; rix < mapFamiglie[nomeFam].length; rix++) {
+            var r = mapFamiglie[nomeFam][rix];
+            var base = r.tipo == "storico" ? arrStorico.slice(0) : arrStagionali.slice(0);
+            html += SCPRenderRecord(r, base, topN);
+          }
         }
       } else {
-        var r = SCPRecordByKey(recordKey);
-        if (r) {
-          var baseOne = r.tipo == "storico" ? arrStorico.slice(0) : arrStagionali.slice(0);
-          html += SCPRenderRecord(r, baseOne, topN);
+        var one = SCPRecordByKey(recordKey);
+        if (one) {
+          html += "<div class='scp-section-title'>" + SCPH(SCPRecordFamiglia(one)) + "</div>";
+          var baseOne = one.tipo == "storico" ? arrStorico.slice(0) : arrStagionali.slice(0);
+          html += SCPRenderRecord(one, baseOne, topN);
         }
       }
 
@@ -999,12 +1089,11 @@
 
       html += "<div class='scp-note'>";
       html += "<b>Nota di lettura</b><br>";
-      html += "I record stagionali sono calcolati su coppie squadra-stagione. ";
-      html += "I record storici sono calcolati sull'intera storia della squadra nel filtro selezionato. ";
-      html += "I record assoluti globali sono calcolati sul gruppo competizioni selezionato e mostrano, nella colonna finale, il contributo delle singole competizioni. ";
+      html += "La pagina ora divide i record in schede per famiglia, cosi' la lettura non e' piu' concentrata in una tabella unica con troppe colonne. ";
+      html += "Ogni scheda mostra solo le colonne essenziali: posizione, squadra, stagione, giocate, valore record e contesto. ";
+      html += "Il dettaglio completo, compreso il contributo delle competizioni nei record globali, resta chiuso e si apre con il link <b>apri</b>. ";
+      html += "I record stagionali sono calcolati su coppie squadra-stagione; i record storici sull'intera storia della squadra nel filtro selezionato. ";
       html += "Punti classifica: vittoria = 3, pareggio = 1, sconfitta = 0. ";
-      html += "Media punteggio = somma punti fantasy / partite giocate. ";
-      html += "Media punti classifica = punti classifica / partite giocate. ";
       html += "Nei record storici di media vengono considerate solo le squadre con almeno 100 partite giocate nel filtro selezionato.";
       html += "</div>";
 

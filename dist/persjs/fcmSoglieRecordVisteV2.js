@@ -264,6 +264,18 @@ function SRVPct(num, den) {
   return SRVF(SRVPctNum(num, den)) + "%";
 }
 
+function SRVToggleRow(id) {
+  var el = document.getElementById(id);
+  if (!el) return false;
+  el.style.display = el.style.display == "table-row" ? "none" : "table-row";
+  return false;
+}
+
+function SRVVal(x, k) {
+  return x && x[k] ? x[k] : 0;
+}
+
+
 function SRVUltimaStagione() {
   if (typeof SogRepUltimaStagione == "function") return SogRepUltimaStagione();
 
@@ -1068,14 +1080,18 @@ function SRVFillSquadre(selectId, stats, includiTutte) {
   if (sel.selectedIndex < 0) sel.value = "";
 }
 
-function SRVRenderRiepilogo(targetId, vista, squadraFiltro, filtroAttuali) {
+function SRVRenderRiepilogo(targetId, vista, squadraFiltro, filtroAttuali, recordFiltro) {
   var rowsOrig = vista.rows || [];
   var rows = [];
   var stats = vista.stats || {};
   var partite = vista.partite || 0;
 
   if (filtroAttuali == null) filtroAttuali = "tutte";
+  if (recordFiltro == null || recordFiltro === "") recordFiltro = "tutti";
   squadraFiltro = String(squadraFiltro == null ? "" : squadraFiltro);
+
+  var filtroRecordAttivo = (recordFiltro != "tutti");
+  var recordLabel = filtroRecordAttivo ? (SRV_RECORD_LABEL[recordFiltro] || recordFiltro) : "Tutti i record";
 
   var attualiMapRiep = null;
   if (filtroAttuali == "attuali") attualiMapRiep = SRVGetSquadreAttualiMap();
@@ -1084,6 +1100,7 @@ function SRVRenderRiepilogo(targetId, vista, squadraFiltro, filtroAttuali) {
     var rr = rowsOrig[rf];
     if (!rr) continue;
 
+    if (filtroRecordAttivo && rr.key != recordFiltro) continue;
     if (attualiMapRiep && !attualiMapRiep[rr.squadra]) continue;
     if (squadraFiltro != "" && rr.squadra != squadraFiltro) continue;
 
@@ -1121,6 +1138,34 @@ function SRVRenderRiepilogo(targetId, vista, squadraFiltro, filtroAttuali) {
     }
   }
 
+  function SRVRiepMatchKey(r) {
+    var m = r && r.m ? r.m : {};
+    return String(m.Stagione) + "|" + String(SRVCompetizioneNormalizzata(m.Competizione)) + "|" + String(m.GiornataA) + "|" + String(m.IDASquadraCasa) + "|" + String(m.IDASquadraFuori) + "|" + String(m.Data);
+  }
+
+  function SRVRiepContaPartiteRows(arr) {
+    var map = {};
+    var n = 0;
+    for (var i = 0; i < arr.length; i++) {
+      var k = SRVRiepMatchKey(arr[i]);
+      if (!map[k]) { map[k] = true; n++; }
+    }
+    return n;
+  }
+
+  function SRVRiepEnsureTeam(map, nome, baseStats) {
+    if (!map[nome]) {
+      map[nome] = {
+        nome: nome,
+        giocate: baseStats && baseStats[nome] ? (baseStats[nome].giocate || 0) : 0,
+        eventi: 0,
+        competizioni: {},
+        dettagli: []
+      };
+    }
+    return map[nome];
+  }
+
   var globale = {
     fortuna: 0,
     sfortuna: 0,
@@ -1140,6 +1185,7 @@ function SRVRenderRiepilogo(targetId, vista, squadraFiltro, filtroAttuali) {
   };
 
   var comp = {};
+  var teamRecordMap = {};
 
   function ensureComp(r) {
     var idNormComp = SRVCompetizioneNormalizzata(r.m.Competizione);
@@ -1168,7 +1214,8 @@ function SRVRenderRiepilogo(targetId, vista, squadraFiltro, filtroAttuali) {
         fc: 0,
         fcPuntiCasa: 0,
         fcPuntiFuori: 0,
-        soglie: 0
+        soglie: 0,
+        eventiFiltro: 0
       };
     }
 
@@ -1178,10 +1225,17 @@ function SRVRenderRiepilogo(targetId, vista, squadraFiltro, filtroAttuali) {
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i];
     var co = ensureComp(r);
+    co.eventiFiltro++;
+
+    var ts = SRVRiepEnsureTeam(teamRecordMap, r.squadra, stats);
+    ts.eventi++;
+    if (!ts.competizioni[String(co.id)]) ts.competizioni[String(co.id)] = { nome: co.nome, eventi: 0 };
+    ts.competizioni[String(co.id)].eventi++;
+    if (ts.dettagli.length < 8) ts.dettagli.push(r);
 
     if (r.key == "vittoriaChirurgica") { globale.fortuna++; globale.vittChir++; co.fortuna++; co.vittChir++; }
-	if (r.key == "cortoMuso") { globale.cortoMuso++; co.cortoMuso++; }
-    if (r.key == "cortoMusoSubito") { globale.cortoMusoSubito++; co.cortoMusoSubito++; }	
+    if (r.key == "cortoMuso") { globale.cortoMuso++; co.cortoMuso++; }
+    if (r.key == "cortoMusoSubito") { globale.cortoMusoSubito++; co.cortoMusoSubito++; }
     if (r.key == "pareggioMiracolato") { globale.fortuna++; globale.parMir++; co.fortuna++; co.parMir++; }
     if (r.key == "sconfittaBeffa") { globale.sfortuna++; globale.sconBeffa++; co.sfortuna++; co.sconBeffa++; }
     if (r.key == "pareggioStretto") { globale.sfortuna++; globale.parStretto++; co.sfortuna++; co.parStretto++; }
@@ -1210,95 +1264,34 @@ function SRVRenderRiepilogo(targetId, vista, squadraFiltro, filtroAttuali) {
 
   html += "<div class='srv-note'>";
   html += "<b>Riepilogo numerico</b><br>";
-  html += "Questa sezione riassume i record sui dati filtrati, separando gli episodi favorevoli da quelli sfavorevoli. ";
-  html += "<b>Partite</b> indica le gare analizzate; <b>Prestazioni</b> indica le prestazioni squadra, quindi due per ogni partita. ";
-  if (filtroAttuali == "attuali" || squadraFiltro != "") {
-    html += "Con il filtro squadre attuali o con una squadra selezionata, le percentuali complessive usano come base le sole prestazioni delle squadre incluse nel filtro. ";
+  html += "Questa sezione rispetta i filtri attivi di stagione, competizione, squadra e record. ";
+  html += "Record selezionato: <b>" + SRVH(recordLabel) + "</b>. ";
+  html += "<b>Partite analizzate</b> indica il campione della pagina; <b>prestazioni squadra</b> indica le presenze squadra, quindi due per ogni partita. ";
+  if (filtroRecordAttivo) {
+    html += "Con un record specifico selezionato, le tabelle mostrano solo gli episodi di quel record e la loro incidenza sulle prestazioni del campione filtrato. ";
   }
-  html += "<br><br>";
-    html += "<b>Botte di culo</b>: totale episodi favorevoli stretti, cioe' <b>Vittorie chirurgiche</b> + <b>Pareggi miracolati</b>. ";
-  html += "La percentuale Botte misura l'incidenza sulle prestazioni squadra filtrate. ";
-  html += "<br>";
-  html += "<b>Vittoria chirurgica</b>: vittoria di un solo gol con squadra esattamente sulla soglia e avversario a -0,5 dalla stessa soglia. ";
-  html += "<br>";
-  html += "<b>Pareggio miracolato</b>: pareggio salvato arrivando esattamente sulla propria soglia mentre l'avversario manca la soglia successiva per 0,5. ";
-  html += "<br><br>";
-  html += "<b>Nuvola di Fantozzi</b>: totale episodi sfavorevoli stretti, cioe' <b>Sconfitte beffa</b> + <b>Pareggi stretti</b>. ";
-  html += "La percentuale Fantozzi misura l'incidenza sulle prestazioni squadra filtrate. ";
-  html += "<br>";
-  html += "<b>Sconfitta beffa</b>: sconfitta di un solo gol con avversario esattamente sulla soglia e squadra a -0,5 dalla stessa soglia. ";
-  html += "<br>";
-  html += "<b>Pareggio stretto</b>: pareggio subito facendo piu' punti dell'avversario, ma restando a -0,5 dalla soglia successiva. ";
-  html += "<br><br>";
-  html += "<b>Saldo fortuna/sfortuna</b> = Botte di culo - Nuvola di Fantozzi. ";
-  html += "<b>Record mezzo punto</b> raccoglie Vittorie mancate per 0,5, Sconfitte per un pelo e Giusto giusto. ";
-  html += "<b>FC</b> indica le partite in cui il fattore campo cambia il risultato. ";
-  html += "<b>Soglie</b> conta le prestazioni chiuse esattamente su una soglia gol.";
   html += "</div>";
 
   html += "<h3>Impatto complessivo</h3>";
   html += "<table class='tb'>";
-  html += "<tr>";
-  html += "<th>Partite</th>";
-  html += "<th>Prestazioni</th>";
-  html += "<th>Botte di culo</th>";
-  html += "<th>% Botte</th>";
-  html += "<th>Vittorie chirurgiche</th>";
-  html += "<th>% Vitt. chirurgiche</th>";
-  html += "<th>Corto muso</th>";
-  html += "<th>% Corto muso</th>";
-  html += "<th>Corto muso subito</th>";
-  html += "<th>% Corto muso subito</th>";
-  html += "<th>Pareggi miracolati</th>";
-  html += "<th>% Miracolati</th>";
-  html += "<th>Nuvola di Fantozzi</th>";
-  html += "<th>% Fantozzi</th>";
-  html += "<th>Sconfitte beffa</th>";
-  html += "<th>% Sconf. beffa</th>";
-  html += "<th>Pareggi stretti</th>";
-  html += "<th>% Pareggi stretti</th>";
-  html += "<th>Saldo F/S</th>";
-  html += "<th>Vittorie mancate 0,5</th>";
-  html += "<th>Sconfitte per un pelo</th>";
-  html += "<th>Giusto giusto</th>";
-  html += "<th>FC decisivo</th>";
-  html += "<th>Soglie precise</th>";
-  html += "<th>% soglie</th>";
-  html += "</tr>";
-  html += "<tr>";
-  html += "<td class='num'>" + partite + "</td>";
-  html += "<td class='num'>" + prestazioniRiepilogo + "</td>";
-  html += "<td class='num good'>" + globale.fortuna + "</td>";
-  html += "<td class='num'>" + SRVPct(globale.fortuna, prestazioniRiepilogo) + "</td>";
-  html += "<td class='num good'>" + globale.vittChir + "</td>";
-  html += "<td class='num'>" + SRVPct(globale.vittChir, prestazioniRiepilogo) + "</td>";
-    html += "<td class='num good'>" + globale.cortoMuso + "</td>";
-  html += "<td class='num'>" + SRVPct(globale.cortoMuso, prestazioniRiepilogo) + "</td>";
-  html += "<td class='num bad'>" + globale.cortoMusoSubito + "</td>";
-  html += "<td class='num'>" + SRVPct(globale.cortoMusoSubito, prestazioniRiepilogo) + "</td>";
-  html += "<td class='num good'>" + globale.parMir + "</td>";
-  html += "<td class='num'>" + SRVPct(globale.parMir, prestazioniRiepilogo) + "</td>";
-  html += "<td class='num bad'>" + globale.sfortuna + "</td>";
-  html += "<td class='num'>" + SRVPct(globale.sfortuna, prestazioniRiepilogo) + "</td>";
-  html += "<td class='num bad'>" + globale.sconBeffa + "</td>";
-  html += "<td class='num'>" + SRVPct(globale.sconBeffa, prestazioniRiepilogo) + "</td>";
-  html += "<td class='num bad'>" + globale.parStretto + "</td>";
-  html += "<td class='num'>" + SRVPct(globale.parStretto, prestazioniRiepilogo) + "</td>";
-  html += "<td class='num'>" + (globale.fortuna - globale.sfortuna) + "</td>";
-  html += "<td class='num bad'>" + globale.vittMancata05 + "</td>";
-  html += "<td class='num bad'>" + globale.sconPelo05 + "</td>";
-  html += "<td class='num good'>" + globale.giustoGiusto + "</td>";
-  html += "<td class='num good'>" + globale.fc + "</td>";
-  html += "<td class='num good'>" + globale.soglie + "</td>";
-  html += "<td class='num'>" + SRVPct(globale.soglie, prestazioniRiepilogo) + "</td>";
-  html += "</tr>";
+  html += "<tr><th>Area</th><th>Valori principali</th><th>Incidenza</th><th>Note</th></tr>";
+  html += "<tr><td><b>Campione</b></td><td>Partite analizzate: <b>" + partite + "</b> - Prestazioni squadra: <b>" + prestazioniRiepilogo + "</b></td><td>-</td><td>Una partita genera due prestazioni squadra.</td></tr>";
+
+  if (filtroRecordAttivo) {
+    var partiteEvento = SRVRiepContaPartiteRows(rows);
+    html += "<tr><td><b>Record selezionato</b></td><td>" + SRVH(recordLabel) + ": <b>" + rows.length + "</b> episodi - Partite con almeno un episodio: <b>" + partiteEvento + "</b></td><td>" + SRVPct(rows.length, prestazioniRiepilogo) + "</td><td>Incidenza del record selezionato sulle prestazioni squadra del campione filtrato.</td></tr>";
+  } else {
+    html += "<tr><td><b>Culo / miracoli</b></td><td>Botte di culo / indice fortuna: <b>" + globale.fortuna + "</b> - Vittorie chirurgiche: <b>" + globale.vittChir + "</b> - Corto muso: <b>" + globale.cortoMuso + "</b> - Pareggi miracolati: <b>" + globale.parMir + "</b></td><td>" + SRVPct(globale.fortuna, prestazioniRiepilogo) + "</td><td>Totale episodi favorevoli stretti.</td></tr>";
+    html += "<tr><td><b>Sfiga / beffe</b></td><td>Sindrome di Fantozzi / indice sfortuna: <b>" + globale.sfortuna + "</b> - Sconfitte beffa: <b>" + globale.sconBeffa + "</b> - Corto muso subito: <b>" + globale.cortoMusoSubito + "</b> - Pareggi stretti: <b>" + globale.parStretto + "</b></td><td>" + SRVPct(globale.sfortuna, prestazioniRiepilogo) + "</td><td>Totale episodi sfavorevoli stretti.</td></tr>";
+    html += "<tr><td><b>Mezzo punto / soglie</b></td><td>Vittorie mancate per 0,5: <b>" + globale.vittMancata05 + "</b> - Sconfitte per un pelo: <b>" + globale.sconPelo05 + "</b> - Giusto giusto: <b>" + globale.giustoGiusto + "</b> - Soglie precise: <b>" + globale.soglie + "</b></td><td>Soglie precise: " + SRVPct(globale.soglie, prestazioniRiepilogo) + "</td><td>Precisione sulle soglie e casi di mezzo punto.</td></tr>";
+    html += "<tr><td><b>Fattore campo</b></td><td>Fattore campo decisivo: <b>" + globale.fc + "</b> - Punti classifica casa guadagnati: <b>" + globale.fcPuntiCasa + "</b> - Punti classifica fuori persi: <b>" + Math.abs(globale.fcPuntiFuori) + "</b></td><td>-</td><td>Partite in cui il fattore campo cambia il risultato.</td></tr>";
+    html += "<tr><td><b>Saldo fortuna/sfortuna</b></td><td>Botte di culo / indice fortuna meno Sindrome di Fantozzi / indice sfortuna: <b>" + (globale.fortuna - globale.sfortuna) + "</b></td><td>-</td><td>Saldo semplice dei soli macro-eventi stretti: vittorie chirurgiche + pareggi miracolati meno sconfitte beffa + pareggi stretti. Non include soglie, mezzo punto e fattore campo.</td></tr>";
+  }
+
   html += "</table>";
 
   var arrComp = [];
-  for (var ck in comp) {
-    if (comp.hasOwnProperty(ck)) arrComp.push(comp[ck]);
-  }
-
+  for (var ck in comp) if (comp.hasOwnProperty(ck)) arrComp.push(comp[ck]);
   arrComp.sort(function(a, b) {
     if (a.ordine != b.ordine) return a.ordine - b.ordine;
     return String(a.nome).localeCompare(String(b.nome));
@@ -1306,136 +1299,126 @@ function SRVRenderRiepilogo(targetId, vista, squadraFiltro, filtroAttuali) {
 
   html += "<h3>Impatto per competizione</h3>";
   html += "<table class='tb'>";
-  html += "<tr>";
-  html += "<th>Competizione</th>";
-  html += "<th>Partite</th>";
-  html += "<th>Prestazioni</th>";
-  html += "<th>Botte di culo</th>";
-  html += "<th>% Botte</th>";
-  html += "<th>Vitt. chirurgiche</th>";
-  html += "<th>Corto muso</th>";
-  html += "<th>% Corto muso</th>";
-  html += "<th>Corto muso subito</th>";
-  html += "<th>% Corto muso subito</th>";
-  html += "<th>Miracolati</th>";
-  html += "<th>Nuvola Fantozzi</th>";
-  html += "<th>% Fantozzi</th>";
-  html += "<th>Sconf. beffa</th>";
-  html += "<th>Pareggi stretti</th>";
-  html += "<th>Saldo F/S</th>";
-  html += "<th>Vitt. mancate</th>";
-  html += "<th>Sconf. pelo</th>";
-  html += "<th>Giusto giusto</th>";
-  html += "<th>FC</th>";
-  html += "<th>Soglie</th>";
-  html += "<th>% soglie</th>";
-  html += "</tr>";
+  if (filtroRecordAttivo) {
+    html += "<tr><th>Competizione</th><th>Partite analizzate</th><th>Prestazioni squadra</th><th>" + SRVH(recordLabel) + "</th><th>Incidenza</th></tr>";
 
-  for (var c = 0; c < arrComp.length; c++) {
-    var co = arrComp[c];
-    html += "<tr>";
-    html += "<td><b>" + SRVH(co.nome) + "</b></td>";
-    html += "<td class='num'>" + co.partite + "</td>";
-    html += "<td class='num'>" + co.prestazioni + "</td>";
-    html += "<td class='num good'>" + co.fortuna + "</td>";
-    html += "<td class='num'>" + SRVPct(co.fortuna, co.prestazioni) + "</td>";
-    html += "<td class='num good'>" + co.vittChir + "</td>";
-        html += "<td class='num good'>" + co.cortoMuso + "</td>";
-    html += "<td class='num'>" + SRVPct(co.cortoMuso, co.prestazioni) + "</td>";
-    html += "<td class='num bad'>" + co.cortoMusoSubito + "</td>";
-    html += "<td class='num'>" + SRVPct(co.cortoMusoSubito, co.prestazioni) + "</td>";
-    html += "<td class='num good'>" + co.parMir + "</td>";
-    html += "<td class='num bad'>" + co.sfortuna + "</td>";
-    html += "<td class='num'>" + SRVPct(co.sfortuna, co.prestazioni) + "</td>";
-    html += "<td class='num bad'>" + co.sconBeffa + "</td>";
-    html += "<td class='num bad'>" + co.parStretto + "</td>";
-    html += "<td class='num'>" + (co.fortuna - co.sfortuna) + "</td>";
-    html += "<td class='num bad'>" + co.vittMancata05 + "</td>";
-    html += "<td class='num bad'>" + co.sconPelo05 + "</td>";
-    html += "<td class='num good'>" + co.giustoGiusto + "</td>";
-    html += "<td class='num good'>" + co.fc + "</td>";
-    html += "<td class='num good'>" + co.soglie + "</td>";
-    html += "<td class='num'>" + SRVPct(co.soglie, co.prestazioni) + "</td>";
-    html += "</tr>";
+    for (var c1 = 0; c1 < arrComp.length; c1++) {
+      var cf = arrComp[c1];
+      html += "<tr>";
+      html += "<td><b>" + SRVH(cf.nome) + "</b></td>";
+      html += "<td class='num'>" + cf.partite + "</td>";
+      html += "<td class='num'>" + cf.prestazioni + "</td>";
+      html += "<td class='num good'>" + cf.eventiFiltro + "</td>";
+      html += "<td class='num'>" + SRVPct(cf.eventiFiltro, cf.prestazioni) + "</td>";
+      html += "</tr>";
+    }
+
+    if (arrComp.length == 0) html += "<tr><td colspan='5'>Nessun dato.</td></tr>";
+  } else {
+    html += "<tr><th>Competizione</th><th>Partite analizzate</th><th>Botte di culo / fortuna</th><th>Sindrome di Fantozzi / sfortuna</th><th>Saldo fortuna/sfortuna</th><th>Corto muso</th><th>Corto muso subito</th><th>Fattore campo decisivo</th><th>Soglie precise</th></tr>";
+
+    for (var c = 0; c < arrComp.length; c++) {
+      var co = arrComp[c];
+      html += "<tr>";
+      html += "<td><b>" + SRVH(co.nome) + "</b></td>";
+      html += "<td class='num'>" + co.partite + "</td>";
+      html += "<td class='num good'>" + co.fortuna + " (" + SRVPct(co.fortuna, co.prestazioni) + ")</td>";
+      html += "<td class='num bad'>" + co.sfortuna + " (" + SRVPct(co.sfortuna, co.prestazioni) + ")</td>";
+      html += "<td class='num'>" + (co.fortuna - co.sfortuna) + "</td>";
+      html += "<td class='num good'>" + co.cortoMuso + "</td>";
+      html += "<td class='num bad'>" + co.cortoMusoSubito + "</td>";
+      html += "<td class='num'>" + co.fc + "</td>";
+      html += "<td class='num'>" + co.soglie + " (" + SRVPct(co.soglie, co.prestazioni) + ")</td>";
+      html += "</tr>";
+    }
+
+    if (arrComp.length == 0) html += "<tr><td colspan='9'>Nessun dato.</td></tr>";
   }
-
-  if (arrComp.length == 0) html += "<tr><td colspan='22'>Nessun dato.</td></tr>";
   html += "</table>";
 
-  arrStats.sort(function(a, b) {
-    if (((b.fortuna || 0) - (b.sfortuna || 0)) != ((a.fortuna || 0) - (a.sfortuna || 0))) return ((b.fortuna || 0) - (b.sfortuna || 0)) - ((a.fortuna || 0) - (a.sfortuna || 0));
-    if ((b.giustoGiusto || 0) != (a.giustoGiusto || 0)) return (b.giustoGiusto || 0) - (a.giustoGiusto || 0);
-    if ((b.soglie || 0) != (a.soglie || 0)) return (b.soglie || 0) - (a.soglie || 0);
-    return String(a.nome).localeCompare(String(b.nome));
-  });
+  if (filtroRecordAttivo) {
+    var arrTeamFiltro = [];
+    for (var tk in teamRecordMap) if (teamRecordMap.hasOwnProperty(tk)) arrTeamFiltro.push(teamRecordMap[tk]);
+    arrTeamFiltro.sort(function(a, b) {
+      if (b.eventi != a.eventi) return b.eventi - a.eventi;
+      if (b.giocate != a.giocate) return b.giocate - a.giocate;
+      return String(a.nome).localeCompare(String(b.nome));
+    });
 
-  html += "<h3>Impatto per squadra</h3>";
-  html += "<table class='tb'>";
-  html += "<tr>";
-  html += "<th>Squadra</th>";
-  html += "<th>Giocate</th>";
-  html += "<th>Botte di culo</th>";
-  html += "<th>% Botte</th>";
-  html += "<th>Vitt. chirurgiche</th>";
-  html += "<th>% Vitt. chirurgiche</th>";
-  html += "<th>Corto muso</th>";
-  html += "<th>% Corto muso</th>";
-  html += "<th>Corto muso subito</th>";
-  html += "<th>% Corto muso subito</th>";
-  html += "<th>Miracolati</th>";
-  html += "<th>% Miracolati</th>";
-  html += "<th>Nuvola Fantozzi</th>";
-  html += "<th>% Fantozzi</th>";
-  html += "<th>Sconf. beffa</th>";
-  html += "<th>% Sconf. beffa</th>";
-  html += "<th>Pareggi stretti</th>";
-  html += "<th>% Pareggi stretti</th>";
-  html += "<th>Saldo F/S</th>";
-  html += "<th>Vitt. mancate</th>";
-  html += "<th>Sconf. pelo</th>";
-  html += "<th>Giusto giusto</th>";
-  html += "<th>FC pro</th>";
-  html += "<th>FC contro</th>";
-  html += "<th>Saldo FC</th>";
-  html += "<th>Soglie</th>";
-  html += "<th>% soglie</th>";
-  html += "</tr>";
+    html += "<h3>Impatto per squadra - " + SRVH(recordLabel) + "</h3>";
+    html += "<table class='tb'>";
+    html += "<tr><th>Squadra</th><th>Giocate</th><th>" + SRVH(recordLabel) + "</th><th>Incidenza</th><th>Competizioni principali</th><th>Dettaglio</th></tr>";
 
-  for (var s = 0; s < arrStats.length; s++) {
-    var sq = arrStats[s];
-    html += "<tr>";
-    html += "<td><b>" + SRVH(sq.nome) + "</b></td>";
-    html += "<td class='num'>" + sq.giocate + "</td>";
-    html += "<td class='num good'>" + (sq.fortuna || 0) + "</td>";
-    html += "<td class='num'>" + SRVPct(sq.fortuna || 0, sq.giocate || 0) + "</td>";
-    html += "<td class='num good'>" + (sq.vittChir || 0) + "</td>";
-    html += "<td class='num'>" + SRVPct(sq.vittChir || 0, sq.giocate || 0) + "</td>";
-    html += "<td class='num good'>" + (sq.cortoMuso || 0) + "</td>";
-    html += "<td class='num'>" + SRVPct(sq.cortoMuso || 0, sq.giocate || 0) + "</td>";
-    html += "<td class='num bad'>" + (sq.cortoMusoSubito || 0) + "</td>";
-    html += "<td class='num'>" + SRVPct(sq.cortoMusoSubito || 0, sq.giocate || 0) + "</td>";
-    html += "<td class='num good'>" + (sq.parMir || 0) + "</td>";
-    html += "<td class='num'>" + SRVPct(sq.parMir || 0, sq.giocate || 0) + "</td>";
-    html += "<td class='num bad'>" + (sq.sfortuna || 0) + "</td>";
-    html += "<td class='num'>" + SRVPct(sq.sfortuna || 0, sq.giocate || 0) + "</td>";
-    html += "<td class='num bad'>" + (sq.sconBeffa || 0) + "</td>";
-    html += "<td class='num'>" + SRVPct(sq.sconBeffa || 0, sq.giocate || 0) + "</td>";
-    html += "<td class='num bad'>" + (sq.parStretto || 0) + "</td>";
-    html += "<td class='num'>" + SRVPct(sq.parStretto || 0, sq.giocate || 0) + "</td>";
-    html += "<td class='num'>" + ((sq.fortuna || 0) - (sq.sfortuna || 0)) + "</td>";
-    html += "<td class='num bad'>" + (sq.vittMancata05 || 0) + "</td>";
-    html += "<td class='num bad'>" + (sq.sconPelo05 || 0) + "</td>";
-    html += "<td class='num good'>" + (sq.giustoGiusto || 0) + "</td>";
-    html += "<td class='num'>" + (sq.fcProCasa || 0) + "</td>";
-    html += "<td class='num'>" + (sq.fcControTrasferta || 0) + "</td>";
-    html += "<td class='num'>" + (sq.fcSaldo || 0) + "</td>";
-    html += "<td class='num'>" + (sq.soglie || 0) + "</td>";
-    html += "<td class='num'>" + SRVPct(sq.soglie || 0, sq.giocate || 0) + "</td>";
-    html += "</tr>";
+    for (var stf = 0; stf < arrTeamFiltro.length; stf++) {
+      var tf = arrTeamFiltro[stf];
+      var detFiltroId = "srv_riep_filtro_" + targetId + "_" + stf;
+      var compTxt = [];
+      for (var kc in tf.competizioni) if (tf.competizioni.hasOwnProperty(kc)) compTxt.push(tf.competizioni[kc].nome + ": " + tf.competizioni[kc].eventi);
+      compTxt.sort();
+      html += "<tr>";
+      html += "<td><b>" + SRVH(tf.nome) + "</b></td>";
+      html += "<td class='num'>" + tf.giocate + "</td>";
+      html += "<td class='num good'>" + tf.eventi + "</td>";
+      html += "<td class='num'>" + SRVPct(tf.eventi, tf.giocate || 0) + "</td>";
+      html += "<td>" + SRVH(compTxt.slice(0, 4).join(" - ")) + "</td>";
+      html += "<td class='cen'><a href='#' onclick=\"return SRVToggleRow('" + detFiltroId + "');\">apri</a></td>";
+      html += "</tr>";
+      html += "<tr id='" + detFiltroId + "' style='display:none;background:#F9F9F9;'><td colspan='6'>";
+      html += "<b>Prime gare del record selezionato</b><br>";
+      if (tf.dettagli.length == 0) html += "Nessun dettaglio.";
+      for (var dg = 0; dg < tf.dettagli.length; dg++) {
+        var dr = tf.dettagli[dg];
+        html += SRVH(SRVNomeCompetizione(dr.m.Competizione)) + " - " + SRVH(dr.squadra) + " vs " + SRVH(dr.avversario) + " - Ris. " + dr.risHtml + " - Punti " + dr.puntiHtml + "<br>";
+      }
+      html += "</td></tr>";
+    }
+
+    if (arrTeamFiltro.length == 0) html += "<tr><td colspan='6'>Nessun dato per il record selezionato.</td></tr>";
+    html += "</table>";
+  } else {
+    arrStats.sort(function(a, b) {
+      if (((b.fortuna || 0) - (b.sfortuna || 0)) != ((a.fortuna || 0) - (a.sfortuna || 0))) return ((b.fortuna || 0) - (b.sfortuna || 0)) - ((a.fortuna || 0) - (a.sfortuna || 0));
+      if ((b.giustoGiusto || 0) != (a.giustoGiusto || 0)) return (b.giustoGiusto || 0) - (a.giustoGiusto || 0);
+      if ((b.soglie || 0) != (a.soglie || 0)) return (b.soglie || 0) - (a.soglie || 0);
+      return String(a.nome).localeCompare(String(b.nome));
+    });
+
+    html += "<h3>Impatto per squadra</h3>";
+    html += "<table class='tb'>";
+    html += "<tr><th>Squadra</th><th>Giocate</th><th>Botte di culo / fortuna</th><th>Sindrome di Fantozzi / sfortuna</th><th>Saldo fortuna/sfortuna</th><th>Mezzo punto e soglie</th><th>Fattore campo</th><th>Dettaglio</th></tr>";
+
+    for (var s = 0; s < arrStats.length; s++) {
+      var sq = arrStats[s];
+      var detId = "srv_riep_sq_" + targetId + "_" + s;
+      html += "<tr>";
+      html += "<td><b>" + SRVH(sq.nome) + "</b></td>";
+      html += "<td class='num'>" + sq.giocate + "</td>";
+      html += "<td class='num good'>" + (sq.fortuna || 0) + " (" + SRVPct(sq.fortuna || 0, sq.giocate || 0) + ")</td>";
+      html += "<td class='num bad'>" + (sq.sfortuna || 0) + " (" + SRVPct(sq.sfortuna || 0, sq.giocate || 0) + ")</td>";
+      html += "<td class='num'>" + ((sq.fortuna || 0) - (sq.sfortuna || 0)) + "</td>";
+      html += "<td>Vittorie mancate per 0,5: " + (sq.vittMancata05 || 0) + " - Sconfitte per un pelo: " + (sq.sconPelo05 || 0) + " - Giusto giusto: " + (sq.giustoGiusto || 0) + " - Soglie precise: " + (sq.soglie || 0) + "</td>";
+      html += "<td>Fattore campo favorevole: " + (sq.fcProCasa || 0) + " gare - Fattore campo contro: " + (sq.fcControTrasferta || 0) + " gare - Saldo punti classifica FC: " + (sq.fcSaldo || 0) + "</td>";
+      html += "<td class='cen'><a href='#' onclick=\"return SRVToggleRow('" + detId + "');\">apri</a></td>";
+      html += "</tr>";
+      html += "<tr id='" + detId + "' style='display:none;background:#F9F9F9;'>";
+      html += "<td colspan='8'>";
+      html += "<b>Dettaglio completo</b><br>";
+      html += "Il saldo fortuna/sfortuna e' dato da botte di culo / indice fortuna meno sindrome di Fantozzi / indice sfortuna. ";
+      html += "Il saldo punti classifica del fattore campo e' invece un'altra cosa: punti guadagnati in casa grazie al +1 meno punti persi fuori casa per il +1 avversario.<br>";
+      html += "Vittorie chirurgiche: <b>" + (sq.vittChir || 0) + "</b> (" + SRVPct(sq.vittChir || 0, sq.giocate || 0) + ") - ";
+      html += "Corto muso: <b>" + (sq.cortoMuso || 0) + "</b> (" + SRVPct(sq.cortoMuso || 0, sq.giocate || 0) + ") - ";
+      html += "Corto muso subito: <b>" + (sq.cortoMusoSubito || 0) + "</b> (" + SRVPct(sq.cortoMusoSubito || 0, sq.giocate || 0) + ") - ";
+      html += "Pareggi miracolati: <b>" + (sq.parMir || 0) + "</b> (" + SRVPct(sq.parMir || 0, sq.giocate || 0) + ")<br>";
+      html += "Sconfitte beffa: <b>" + (sq.sconBeffa || 0) + "</b> (" + SRVPct(sq.sconBeffa || 0, sq.giocate || 0) + ") - ";
+      html += "Pareggi stretti: <b>" + (sq.parStretto || 0) + "</b> (" + SRVPct(sq.parStretto || 0, sq.giocate || 0) + ") - ";
+      html += "Soglie precise: <b>" + (sq.soglie || 0) + "</b> (" + SRVPct(sq.soglie || 0, sq.giocate || 0) + ")";
+      html += "</td>";
+      html += "</tr>";
+    }
+
+    if (arrStats.length == 0) html += "<tr><td colspan='8'>Nessun dato.</td></tr>";
+    html += "</table>";
   }
-
-  if (arrStats.length == 0) html += "<tr><td colspan='27'>Nessun dato.</td></tr>";
-  html += "</table>";
 
   document.getElementById(targetId).innerHTML = html;
 }
@@ -1579,14 +1562,15 @@ function SRVRenderClassificaAppend(targetId, vista, metricaKey, filtroAttuali, t
   html += "<div class='srv-note'>";
   html += "<b>" + SRVH(met.label) + "</b><br>";
   html += SRVH(met.descrizione) + "<br>";
-  html += "In caso di pari merito sull'ultima posizione, vengono mostrate tutte le squadre pari.";
+  html += "Tabella compatta: il dettaglio completo resta chiuso e si apre con il link <b>apri</b>. In caso di pari merito sull'ultima posizione, vengono mostrate tutte le squadre pari.";
   html += "</div>";
 
   html += "<table class='tb'>";
-  html += "<tr><th>Pos.</th><th>Squadra</th><th>Giocate</th><th>" + SRVH(met.col) + "</th><th>Indice %</th><th>Fortuna</th><th>Sfortuna</th><th>Saldo F/S</th><th>Soglie</th><th>% soglie</th><th>Saldo FC</th></tr>";
+  html += "<tr><th>Pos.</th><th>Squadra</th><th>Giocate</th><th>" + SRVH(met.col) + "</th><th>Incidenza %</th><th>Saldo fortuna/sfortuna</th><th>Contesto</th><th>Dettaglio</th></tr>";
 
   for (var r = 0; r < filtrati.length; r++) {
     var x = filtrati[r];
+    var detId = "srv_cls_" + targetId + "_" + String(metricaKey).replace(/[^0-9A-Za-z_]/g, "_") + "_" + r;
 
     html += "<tr>";
     html += "<td class='cen'>" + (r + 1) + "</td>";
@@ -1594,16 +1578,26 @@ function SRVRenderClassificaAppend(targetId, vista, metricaKey, filtroAttuali, t
     html += "<td class='num'>" + x.giocate + "</td>";
     html += "<td class='num good'>" + SRVF(met.val(x)) + "</td>";
     html += "<td class='num'>" + SRVF(met.pct(x)) + "%</td>";
-    html += "<td class='num'>" + x.fortuna + " (" + SRVPct(x.fortuna, x.giocate) + ")</td>";
-    html += "<td class='num'>" + x.sfortuna + " (" + SRVPct(x.sfortuna, x.giocate) + ")</td>";
     html += "<td class='num'>" + ((x.fortuna || 0) - (x.sfortuna || 0)) + "</td>";
-    html += "<td class='num'>" + x.soglie + "</td>";
-    html += "<td class='num'>" + SRVPct(x.soglie, x.giocate) + "</td>";
-    html += "<td class='num'>" + x.fcSaldo + "</td>";
+    html += "<td>Botte di culo / fortuna " + x.fortuna + " - Sindrome di Fantozzi / sfortuna " + x.sfortuna + " - Soglie precise " + x.soglie + " - Saldo punti FC " + x.fcSaldo + "</td>";
+    html += "<td class='cen'><a href='#' onclick=\"return SRVToggleRow('" + detId + "');\">apri</a></td>";
+    html += "</tr>";
+
+    html += "<tr id='" + detId + "' style='display:none;background:#F9F9F9;'>";
+    html += "<td colspan='8'>";
+    html += "<b>Dettaglio completo</b><br>";
+    html += "Botte di culo / fortuna: <b>" + x.fortuna + "</b> (" + SRVPct(x.fortuna, x.giocate) + ") - ";
+    html += "Sindrome di Fantozzi / sfortuna: <b>" + x.sfortuna + "</b> (" + SRVPct(x.sfortuna, x.giocate) + ") - ";
+    html += "Vitt. chirurgiche: <b>" + x.vittChir + "</b> - ";
+    html += "Corto muso/subito: <b>" + x.cortoMuso + "/" + x.cortoMusoSubito + "</b> - ";
+    html += "Miracolati: <b>" + x.parMir + "</b> - Sconf. beffa: <b>" + x.sconBeffa + "</b> - Pareggi stretti: <b>" + x.parStretto + "</b><br>";
+    html += "Vitt. mancate 0,5: <b>" + x.vittMancata05 + "</b> - Sconf. per un pelo: <b>" + x.sconPelo05 + "</b> - Giusto giusto: <b>" + x.giustoGiusto + "</b> - Soglie: <b>" + x.soglie + "</b> (" + SRVPct(x.soglie, x.giocate) + ")<br>";
+    html += "Fattore campo favorevole: <b>" + x.fcProCasa + "</b> gare - Fattore campo contro: <b>" + x.fcControTrasferta + "</b> gare - Saldo punti classifica FC: <b>" + x.fcSaldo + "</b>";
+    html += "</td>";
     html += "</tr>";
   }
 
-  if (filtrati.length == 0) html += "<tr><td colspan='11'>Nessun dato.</td></tr>";
+  if (filtrati.length == 0) html += "<tr><td colspan='8'>Nessun dato.</td></tr>";
 
   html += "</table>";
 

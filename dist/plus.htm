@@ -9,16 +9,39 @@
     body { font-family: Arial, Helvetica, sans-serif; font-size: 12px; }
     .plus-box { border: 1px solid #2323B3; background: #CCFFFF; padding: 12px; }
     .plus-menu { border: 1px solid #999; background: #FFFFE0; padding: 10px; margin: 10px 0 14px 0; line-height: 1.8em; }
+    .plus-section { margin-top: 10px; padding-top: 8px; border-top: 1px solid #CCCC99; }
+    .plus-note { color: #444; margin-top: 8px; line-height: 1.4em; }
+    .plus-new { font-weight: bold; color: #2323B3; }
   </style>
 </head>
 <body>
   <div class="plus-box">
     <h2>ConfrontiStorici Plus</h2>
+    <p class="plus-note">
+      Pagine aggiuntive non ufficiali per ConfrontiStorici 3.4. Il plugin originale non viene modificato.
+    </p>
+
     <div class="plus-menu">
       <b>Pagine disponibili</b><br>
-      <a href="soglieRecordStagioneV2.htm">Record Soglie - Stagione V2</a><br>
-      <a href="soglieRecordStoricoV2.htm">Record Soglie - Storico V2</a><br>
-      <a href="statisticheClassichePlus.htm">Statistiche Classiche Plus</a>
+
+      <div class="plus-section">
+        <b>Record Soglie V2</b><br>
+        <a href="soglieRecordStagioneV2.htm">Record Soglie - Stagione V2</a><br>
+        <a href="soglieRecordStoricoV2.htm">Record Soglie - Storico V2</a><br>
+        <span class="plus-note">Record su soglie, mezzo punto, corto muso, fattore campo, fortuna/sfortuna e dettaglio gare.</span>
+      </div>
+
+      <div class="plus-section">
+        <b>Statistiche Classiche Plus</b><br>
+        <a href="statisticheClassichePlus.htm">Statistiche Classiche Plus</a><br>
+        <span class="plus-note">Record classici per punteggi, classifica, risultati, gol e medie storiche, con vista a schede.</span>
+      </div>
+
+      <div class="plus-section">
+        <b>Culometro Plus</b><br>
+        <a href="culometroPlus.htm"><span class="plus-new">Culometro Plus</span></a><br>
+        <span class="plus-note">Indice 0-100 di fortuna/sfortuna normalizzato per partite giocate, con pesi configurabili e rarita' storica degli eventi.</span>
+      </div>
     </div>
   </div>
 </body>
